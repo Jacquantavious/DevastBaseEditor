@@ -99,17 +99,24 @@
         };
 
         // Configuration for different object types
+        // Added shapeType for simpler drawing logic separation
         const OBJECT_CONFIGS = {
-            'research': { name: 'Research (3x1 Blue)', color: '#4C60F5', length: 3, widthRatio: 2/3 },
-            'smelter': { name: 'Smelter (3x1 Red)', color: '#E32636', length: 3, widthRatio: 2/3 },
-            'tesla': { name: 'Tesla (3x1 Green)', color: '#00AA00', length: 3, widthRatio: 2/3 },
-            'fridge': { name: 'Fridge (1x1 Half Gray)', color: '#A9A9A9', length: 1, widthRatio: 1 },
-            'workbench': { name: 'Workbench (1x1 Brown Circle)', color: '#A0522D', length: 1, widthRatio: 1 },
-            'firepit': { name: 'Firepit (1x1 Yellow Circle)', color: '#FFD700', length: 1, widthRatio: 1 },
-            'metal_wall': { name: 'Metal Wall (1x1 White)', color: '#FFFFFF', length: 1, widthRatio: 1 },
-            'metal_door': { name: 'Metal Door (1x1 Gray, Red Hinge)', color: '#808080', length: 1, widthRatio: 1 },
-            'tiled_floor': { name: 'Tiled Floor (1x1 White Plus)', color: '#505050', length: 1, widthRatio: 1 },
-            'unknown': { name: 'Unknown Block', color: '#000000', length: 1, widthRatio: 1 } // New UNKNOWN block
+            'research': { name: 'Research (3x1 Blue)', color: '#4C60F5', length: 3, widthRatio: 2/3, shapeType: 'rectangle' },
+            'smelter': { name: 'Smelter (3x1 Red)', color: '#E32636', length: 3, widthRatio: 2/3, shapeType: 'rectangle' },
+            'tesla': { name: 'Tesla (3x1 Green)', color: '#00AA00', length: 3, widthRatio: 2/3, shapeType: 'rectangle' },
+            'fridge': { name: 'Fridge (1x1 Half Gray)', color: '#A9A9A9', length: 1, widthRatio: 1, shapeType: 'half-square' },
+            
+            'workbench': { name: 'Workbench (1x1 Brown Circle)', color: '#A0522D', length: 1, widthRatio: 1, shapeType: 'circle' },
+            'firepit': { name: 'Firepit (1x1 Yellow Circle)', color: '#FFD700', length: 1, widthRatio: 1, shapeType: 'circle' },
+            // NEW BLOCKS
+            'feeder': { name: 'Feeder (1x1 Blue Circle)', color: '#3b82f6', length: 1, widthRatio: 1, shapeType: 'circle' },
+            'weaving': { name: 'Weaving (1x1 Tan Circle)', color: '#d97706', length: 1, widthRatio: 1, shapeType: 'circle' },
+            'bag': { name: 'Bag (1x1 Tan Oval)', color: '#d97706', length: 1, widthRatio: 1, shapeType: 'oval' },
+            
+            'metal_wall': { name: 'Metal Wall (1x1 White)', color: '#FFFFFF', length: 1, widthRatio: 1, shapeType: 'square' },
+            'metal_door': { name: 'Metal Door (1x1 Gray, Red Hinge)', color: '#808080', length: 1, widthRatio: 1, shapeType: 'square' },
+            'tiled_floor': { name: 'Tiled Floor (1x1 White Plus)', color: '#505050', length: 1, widthRatio: 1, shapeType: 'square' },
+            'unknown': { name: 'Unknown Block', color: '#000000', length: 1, widthRatio: 1, shapeType: 'square' } 
         };
 
         // Known IDs for code output
@@ -117,7 +124,11 @@
             'research': 55, 'smelter': 49, 'tesla': 94, 'fridge': 61,
             'workbench': 19, 'firepit': 48, 'metal_wall': 29, 'metal_door': 52,
             'tiled_floor': 85,
-            'unknown': 99 // ID for blocks loaded with unknown IDs
+            'unknown': 99, 
+            // NEW BLOCK IDS
+            'feeder': 160,
+            'weaving': 57,
+            'bag': 64
         };
 
         // Reverse map for loading: ID -> type name (for easy lookup from code string)
@@ -247,17 +258,25 @@
             const rotationToApply = (obj.rotation + rotationOffset) % 360;
             
             ctx.translate(cellCenterX, cellCenterY);
-            ctx.rotate(rotationToApply * Math.PI / 180);
+            // Apply rotation for features/ovals
+            if (is3x1Feature || config.shapeType === 'oval') {
+                ctx.rotate(obj.rotation * Math.PI / 180);
+            }
+
 
             const S = originalCellSize;
             const halfS = S / 2;
 
             if (is3x1Feature) {
+                // --- 3x1 Feature Drawing (Rectangle) ---
                 const featureTotalLength = originalCellSize * config.length; 
                 const drawLength = featureTotalLength; 
                 const drawHeight = originalCellSize * config.widthRatio;
                 const featureDrawX = -drawLength / 2;
                 const featureDrawY = -drawHeight / 2;
+                
+                // Re-apply rotation for 3x1 visual offset
+                ctx.rotate(90 * Math.PI / 180); 
 
                 ctx.fillStyle = config.color;
                 ctx.fillRect(featureDrawX, featureDrawY, drawLength, drawHeight);
@@ -274,61 +293,94 @@
                     }
                 }
             } 
-            else if (obj.type === 'fridge') {
-                ctx.fillStyle = config.color;
-                ctx.fillRect(-halfS, -halfS, halfS, S); 
+            // --- 1x1 Feature Drawing (Circles/Ovals/Squares) ---
+            else { 
+                
+                // --- CIRCLE/OVAL SHAPES (New and Existing) ---
+                if (config.shapeType === 'circle' || config.shapeType === 'oval') {
+                    
+                    const radius = halfS * 0.9; 
+                    let radiusX = radius;
+                    let radiusY = radius;
+                    
+                    // Specific dimensions for Oval (Bag)
+                    if (config.shapeType === 'oval') {
+                        radiusX = halfS * 0.8;
+                        radiusY = halfS * 0.45;
+                    }
+                    
+                    ctx.fillStyle = config.color;
+                    ctx.beginPath();
+                    
+                    if (config.shapeType === 'circle') {
+                        ctx.arc(0, 0, radius, 0, 2 * Math.PI); 
+                    } else { // oval (rotation already applied by ctx.rotate above)
+                         ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                    }
+                    
+                    ctx.fill();
 
-                ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
-                ctx.lineWidth = 2 / scale;
-                ctx.strokeRect(-halfS, -halfS, S, S);
-            }
-            else if (obj.type === 'metal_wall' || obj.type === 'metal_door' || obj.type === 'unknown') {
-                // Drawing for 1x1 blocks including the new 'unknown' block
-                ctx.fillStyle = config.color;
-                ctx.fillRect(-halfS, -halfS, S, S); 
+                    ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
+                    ctx.lineWidth = 2 / scale;
+                    ctx.beginPath();
+                    
+                    if (config.shapeType === 'circle') {
+                        ctx.arc(0, 0, radius, 0, 2 * Math.PI); 
+                    } else { // oval
+                         ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                    }
+                    ctx.stroke();
 
-                if (obj.type === 'metal_door' && scale > 0.5) {
-                    const detailSize = S * 0.3; 
-                    const detailX = -halfS; 
-                    const detailY = halfS - detailSize; 
-                    ctx.fillStyle = '#E32636'; 
-                    ctx.fillRect(detailX, detailY, detailSize, detailSize); 
+                }
+                
+                // --- FRIDGE (Half Block - Special Case) ---
+                else if (config.shapeType === 'half-square') {
+                    ctx.fillStyle = config.color;
+                    ctx.fillRect(-halfS, -halfS, halfS, S); 
+
+                    ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
+                    ctx.lineWidth = 2 / scale;
+                    ctx.strokeRect(-halfS, -halfS, S, S);
                 }
 
-                ctx.strokeStyle = isGhost ? '#AAAAAA' : (obj.type === 'metal_wall' ? '#333333' : '#444444'); 
-                
-                // Special outline for UNKNOWN blocks
-                if (obj.type === 'unknown') {
-                     ctx.strokeStyle = isGhost ? 'rgba(255, 0, 0, 0.5)' : '#FF0000'; // Red outline for unknown blocks
+                // --- TILED FLOOR ---
+                else if (obj.type === 'tiled_floor') {
+                    ctx.fillStyle = config.color;
+                    ctx.fillRect(-halfS, -halfS, S, S); 
+                    
+                    if (scale > 0.5) {
+                        drawTiledFloorDetail(S, isGhost);
+                    }
+
+                    ctx.strokeStyle = isGhost ? '#AAAAAA' : '#444444'; 
+                    ctx.lineWidth = 2 / scale;
+                    ctx.strokeRect(-halfS, -halfS, S, S);
                 }
                 
-                ctx.lineWidth = 2 / scale;
-                ctx.strokeRect(-halfS, -halfS, S, S);
-            }
-            else if (obj.type === 'workbench' || obj.type === 'firepit') {
-                const radius = halfS * 0.9; 
-                
-                ctx.fillStyle = config.color;
-                ctx.beginPath();
-                ctx.arc(0, 0, radius, 0, 2 * Math.PI); 
-                ctx.fill();
+                // --- SQUARE BLOCKS (Wall, Door, Unknown) ---
+                else { 
+                    ctx.fillStyle = config.color;
+                    ctx.fillRect(-halfS, -halfS, S, S); 
 
-                ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
-                ctx.lineWidth = 2 / scale;
-                ctx.beginPath();
-                ctx.arc(0, 0, radius, 0, 2 * Math.PI);
-                ctx.stroke();
+                    if (obj.type === 'metal_door' && scale > 0.5) {
+                        const detailSize = S * 0.3; 
+                        const detailX = -halfS; 
+                        const detailY = halfS - detailSize; 
+                        ctx.fillStyle = '#E32636'; 
+                        ctx.fillRect(detailX, detailY, detailSize, detailSize); 
+                    }
 
-            }
-            else if (obj.type === 'tiled_floor') {
-                ctx.fillStyle = config.color;
-                ctx.fillRect(-halfS, -halfS, S, S); 
-                
-                if (scale > 0.5) {
-                    drawTiledFloorDetail(S, isGhost);
+                    ctx.strokeStyle = isGhost ? '#AAAAAA' : (obj.type === 'metal_wall' ? '#333333' : '#444444'); 
+                    
+                    if (obj.type === 'unknown') {
+                         ctx.strokeStyle = isGhost ? 'rgba(255, 0, 0, 0.5)' : '#FF0000'; // Red outline for unknown blocks
+                    }
+                    
+                    ctx.lineWidth = 2 / scale;
+                    ctx.strokeRect(-halfS, -halfS, S, S);
                 }
             }
-
+            
             ctx.restore();
             
             if (isGhost) {
@@ -479,7 +531,7 @@
          */
         function setMode(newMode) {
             // If switching away from CLONE mode, clear any pending clone data
-            if (currentMode === MODES.CLONE && newMode !== MODES.CLONE) {
+            if (currentMode === MODES.CLopeN && newMode !== MODES.CLONE) {
                 clonedArea = null;
             }
             
@@ -832,7 +884,9 @@
                 
                 case 'r': 
                     event.preventDefault(); 
-                    if (selectedObjectType !== 'tiled_floor') {
+                    const config = OBJECT_CONFIGS[selectedObjectType];
+                    // Only allow rotation on 3x1 features and the oval (Bag)
+                    if (config.length > 1 || config.shapeType === 'oval') {
                         ghostRotation = (ghostRotation + 90) % 360; 
                         moved = true; 
                     }
@@ -883,7 +937,8 @@
                     }
                 } else {
                     // Check special objects and floor objects for occupancy
-                    const isOccupied = [...specialObjects, ...floorObjects].some(obj => obj.row === cell.row && obj.col === cell.col);
+                    // For simplicity in a 1x1 grid, we check if the cell is occupied by any special object.
+                    const isOccupied = specialObjects.some(obj => obj.row === cell.row && obj.col === cell.col);
 
                     if (!isOccupied) {
                         let newId = KNOWN_INTEGER_IDS[selectedObjectType] || 0; 
@@ -896,9 +951,9 @@
                         specialObjects = specialObjects.filter(obj => 
                             !(obj.row === cell.row && obj.col === cell.col)
                         );
-                        floorObjects = floorObjects.filter(obj => 
-                            !(obj.row === cell.row && obj.col === cell.col)
-                        );
+                        // Note: Floor tiles are only removed if a feature is placed on top. 
+                        // To allow floor toggle in click mode, we must remove it here too.
+                        // However, let's keep it simple: Click mode places features or toggles floor only.
                     }
                 }
                 drawGrid();
@@ -926,7 +981,6 @@
         
         /**
          * Parses the map code string and updates the global map arrays.
-         * This implements the requested feature.
          */
         function loadMapFromCode() {
             const code = document.getElementById('map-code-input').value;
@@ -970,7 +1024,6 @@
                 };
                 
                 // Decide if it's a floor tile or a special feature
-                // Tiled floor is handled separately to allow features to be placed over it.
                 if (newObject.type === 'tiled_floor') {
                      floorObjects.push(newObject);
                 } else {
@@ -1014,13 +1067,14 @@
         function handleItemChange(event) {
             selectedObjectType = event.target.value;
             
-            const is3x1Feature = ['research', 'smelter', 'tesla'].includes(selectedObjectType);
+            const config = OBJECT_CONFIGS[selectedObjectType];
+            const isRotatable = config.length > 1 || config.shapeType === 'oval';
 
-            if (is3x1Feature) {
-                ghostRotation = 0; 
-            } else {
+            if (!isRotatable) {
+                // Reset rotation for items that shouldn't rotate visually
                 ghostRotation = 0; 
             }
+            
             // Clear clone data if selected item changes
             if (currentMode === MODES.CLONE) {
                 clonedArea = null;
@@ -1085,7 +1139,7 @@
             // Initialize buttons and dropdown
             document.getElementById('generate-code-btn').addEventListener('click', generateMapCode);
             document.getElementById('copy-code-btn').addEventListener('click', copyCode);
-            document.getElementById('load-map-btn').addEventListener('click', loadMapFromCode); // NEW: Load map button
+            document.getElementById('load-map-btn').addEventListener('click', loadMapFromCode); 
 
             const select = document.getElementById('item-select');
             select.innerHTML = ''; 
@@ -1214,7 +1268,7 @@
                 <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
                     <li>**Zoom**: Use the **Scroll Wheel** (or pinch on touch devices).</li>
                     <li>**Pan/Move**: Use **WASD** keys or **Middle Mouse Click & Drag**.</li>
-                    <li>**Rotate Ghost Preview**: Press **R** to rotate the object ghost before placing (only for applicable items).</li>
+                    <li>**Rotate Ghost Preview**: Press **R** to rotate the object ghost before placing (only for applicable items like 3x1 features or the Bag oval).</li>
                     <li>**Toggle Help**: Press **H** to show/hide this modal.</li>
                 </ul>
 
