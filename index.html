@@ -3,17 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>149x149 Grid Panner & Zoomer</title>
+    <title>Devast Base Editor (H for Help)</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Set the body and HTML to full height to ensure centering works well */
+        /* Custom CSS for Game/App Styling */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
         html, body {
             height: 100%;
             margin: 0;
             padding: 0;
             font-family: 'Inter', sans-serif;
             background-color: #1a1a1a; /* Dark background for contrast */
+            overflow: hidden; /* Prevent body scroll */
+        }
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto; /* Allow scrolling if content is taller than screen */
         }
         /* Style the canvas to ensure it doesn't cause overflow and is treated as a block element */
         #gridCanvas {
@@ -25,143 +36,146 @@
             cursor: grab; /* Indicate it's movable */
             touch-action: none; /* Prevent unwanted browser touch gestures */
             border-radius: 0.5rem; /* Rounded corners */
+            background-color: #38523A; /* Grid fill color */
         }
         /* Style for the code output textarea */
         #map-code-output {
             resize: none;
             font-family: monospace;
-            word-break: break-all; /* Ensure long string wraps correctly */
+            word-break: break-all;
+        }
+        /* Mode button specific styles */
+        .mode-btn {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            transition: all 0.15s ease-in-out;
+            font-size: 1.25rem;
+            line-height: 1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .modal-overlay.visible {
+            opacity: 1;
+        }
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            transform: scale(0.8);
+            transition: transform 0.3s ease-in-out;
+        }
+        .modal-overlay.visible .modal-content {
+             transform: scale(1);
         }
     </style>
     <script>
         // Constants for the grid
-        const GRID_SIZE = 149;
-        const GRID_FILL_COLOR = '#38523A'; // Dark olive green
-        const GRID_LINE_COLOR = '#000000'; // Black lines
-        const BACKGROUND_COLOR = '#1a1a1a'; // Match body background
-        const DRAG_THRESHOLD = 5; // Pixels distance before a click becomes a drag/pan
+        const GRID_SIZE = 149; 
+        const GRID_FILL_COLOR = '#38523A'; 
+        const GRID_LINE_COLOR = '#000000'; 
+        const BACKGROUND_COLOR = '#1a1a1a'; 
+        const DRAG_THRESHOLD = 5; 
+
+        // --- Modes ---
+        const MODES = {
+            CLICK: 'click',
+            LINE: 'line',
+            DELETE: 'delete',
+            CLONE: 'clone'
+        };
 
         // Configuration for different object types
         const OBJECT_CONFIGS = {
-            'research': {
-                name: 'Research (3x1 Blue)',
-                color: '#4C60F5', // Bright Blue 
-                length: 3, 
-                widthRatio: 2/3
-            },
-            'smelter': { 
-                name: 'Smelter (3x1 Red)', 
-                color: '#E32636', // Bright Red for the base
-                length: 3, 
-                widthRatio: 2/3
-            },
-            'tesla': { 
-                name: 'Tesla (3x1 Green)', 
-                color: '#00AA00', // Bright Green
-                length: 3, 
-                widthRatio: 2/3
-            },
-            'fridge': {
-                name: 'Fridge (1x1 Half Gray)',
-                color: '#A9A9A9', // Dark Gray
-                length: 1, 
-                widthRatio: 1 // Full cell, but drawing function will handle half fill
-            },
-            // Workbench (1x1 Brown Circle)
-            'workbench': {
-                name: 'Workbench (1x1 Brown Circle)',
-                color: '#A0522D', // Sienna Brown
-                length: 1, 
-                widthRatio: 1 // Full cell, drawing function will handle the circle shape
-            },
-            // Firepit (1x1 Yellow Circle)
-            'firepit': {
-                name: 'Firepit (1x1 Yellow Circle)',
-                color: '#FFD700', // Gold/Yellow
-                length: 1,
-                widthRatio: 1 // Full cell, drawing function will handle the circle shape
-            }
+            'research': { name: 'Research (3x1 Blue)', color: '#4C60F5', length: 3, widthRatio: 2/3 },
+            'smelter': { name: 'Smelter (3x1 Red)', color: '#E32636', length: 3, widthRatio: 2/3 },
+            'tesla': { name: 'Tesla (3x1 Green)', color: '#00AA00', length: 3, widthRatio: 2/3 },
+            'fridge': { name: 'Fridge (1x1 Half Gray)', color: '#A9A9A9', length: 1, widthRatio: 1 },
+            'workbench': { name: 'Workbench (1x1 Brown Circle)', color: '#A0522D', length: 1, widthRatio: 1 },
+            'firepit': { name: 'Firepit (1x1 Yellow Circle)', color: '#FFD700', length: 1, widthRatio: 1 },
+            'metal_wall': { name: 'Metal Wall (1x1 White)', color: '#FFFFFF', length: 1, widthRatio: 1 },
+            'metal_door': { name: 'Metal Door (1x1 Gray, Red Hinge)', color: '#808080', length: 1, widthRatio: 1 },
+            'tiled_floor': { name: 'Tiled Floor (1x1 White Plus)', color: '#505050', length: 1, widthRatio: 1 },
+            'unknown': { name: 'Unknown Block', color: '#000000', length: 1, widthRatio: 1 } // New UNKNOWN block
         };
 
-        // Known IDs that should be output as integers, not strings or UUIDs
+        // Known IDs for code output
         const KNOWN_INTEGER_IDS = {
-            'fridge': 61,
-            'workbench': 19,
-            'firepit': 48,
+            'research': 55, 'smelter': 49, 'tesla': 94, 'fridge': 61,
+            'workbench': 19, 'firepit': 48, 'metal_wall': 29, 'metal_door': 52,
+            'tiled_floor': 85,
+            'unknown': 99 // ID for blocks loaded with unknown IDs
         };
 
-        // State for Pan and Zoom
+        // Reverse map for loading: ID -> type name (for easy lookup from code string)
+        const ID_TO_TYPE = {};
+        for (const type in KNOWN_INTEGER_IDS) {
+            ID_TO_TYPE[KNOWN_INTEGER_IDS[type]] = type;
+        }
+
+        // --- Global State ---
         let scale = 1.0;
         let panX = 0;
         let panY = 0;
-        let baseSize = 0; // The calculated size of the canvas based on window dimensions
+        let baseSize = 0; 
         
-        // State for Drag/Click Detection
-        let isDragging = false; // Is *any* mouse button currently down?
-        let isPanning = false; // Did a middle-click pan or a left-click drag occur?
+        let isDragging = false; 
+        let isPanning = false;  
         let clickStartX = 0;
         let clickStartY = 0;
-        let lastPanX = 0; // Stores last position for middle-click panning
+        let lastPanX = 0; 
         let lastPanY = 0;
 
         let canvas;
         let ctx;
 
-        // --- State for Placed Objects ---
-        /** * Array to store placed objects. All initial features have been removed.
-         * Structure: { type: string, row: number, col: number, rotation: number, id: string | number }
-         */
-        let specialObjects = [
-            // The grid starts empty in the top-left corner as requested.
-        ];
-        let selectedObjectType = 'workbench'; // Set default selection to the new item
+        let specialObjects = []; // Features/Walls/Doors
+        let floorObjects = [];   // Floor Tiles
 
-        // --- State for Ghost Preview ---
-        let ghostRow = -1; // Current row for ghost preview
-        let ghostCol = -1; // Current column for ghost preview
-        let ghostRotation = 0; // Rotation for the ghost preview (0, 90, 180, 270)
+        let selectedObjectType = 'metal_door'; 
+        let ghostRow = -1; 
+        let ghostCol = -1; 
+        let ghostRotation = 0; 
 
-
-        /**
-         * Recalculates the base size of the canvas based on window dimensions.
-         */
-        function updateBaseSize() {
-            const padding = 80; // Padding for the canvas within the viewport
-            // Ensure the base size is a perfect square constrained by the viewport
-            let size = Math.min(window.innerWidth, window.innerHeight) - padding;
-            // Add a minimum size to prevent issues on tiny screens
-            baseSize = Math.max(size, 300);
-            
-            canvas.width = baseSize;
-            canvas.height = baseSize;
-        }
+        // --- Mode State ---
+        let currentMode = MODES.CLICK;
+        let isDraggingForAction = false; 
+        let dragStartCell = null;
+        let dragCurrentCell = null;
+        let clonedArea = null; 
+        
+        // --- Modal Elements ---
+        let helpModalOverlay;
+        let helpModal;
 
         /**
          * Calculates the grid cell (row, col) from screen coordinates (x, y) after pan and zoom.
-         * @param {number} screenX X-coordinate relative to the canvas.
-         * @param {number} screenY Y-coordinate relative to the canvas.
-         * @returns {{row: number, col: number} | null} The cell coordinates or null if outside the grid.
          */
         function getCellFromScreenCoords(screenX, screenY) {
             const originalCellSize = baseSize / GRID_SIZE;
-
-            // Inverse transformation: 
             const unPannedX = screenX - panX;
             const unPannedY = screenY - panY;
-            
             const worldX = unPannedX / scale;
             const worldY = unPannedY / scale;
 
-            // Check if within the 0 to baseSize boundaries of the grid content
-            if (worldX < 0 || worldX >= baseSize || worldY < 0 || worldY >= baseSize) {
-                return null;
-            }
+            if (worldX < 0 || worldX >= baseSize || worldY < 0 || worldY >= baseSize) return null;
 
-            // Convert world coordinates to cell index (0 to GRID_SIZE - 1)
             const col = Math.floor(worldX / originalCellSize);
             const row = Math.floor(worldY / originalCellSize);
             
-            // Clamp coordinates to grid limits
             const clampedRow = Math.min(GRID_SIZE - 1, Math.max(0, row));
             const clampedCol = Math.min(GRID_SIZE - 1, Math.max(0, col));
 
@@ -169,110 +183,89 @@
         }
 
         /**
-         * Draws the red square detail for the middle block of the research feature, in the bottom half.
-         * Assumes the context is already translated to the center of the middle block.
-         * @param {number} cellSize The original cell size (width/height).
-         * @param {number} widthRatio The height ratio of the blue feature (2/3).
+         * Draws internal details for the Research object.
          */
         function drawResearchInternalDetail(cellSize, widthRatio) {
-            // Context (0, 0) is the center of the middle cell.
-
-            // --- 1. Red Rectangle (Small, in the bottom half of the blue feature) ---
-            const redSize = cellSize * 0.4; // 40% of the cell width/height for the square
-            const drawHeight = cellSize * widthRatio; // The actual height of the blue feature part
-
-            // Center X in the cell
+            const redSize = cellSize * 0.4;
+            const drawHeight = cellSize * widthRatio;
             const redX = -redSize / 2;
-            
-            // Calculate Y position: center it within the bottom half of the blue feature [0, drawHeight/2]
-            const featureBottomHalfHeight = drawHeight / 2;
-            const redCenterY = featureBottomHalfHeight / 2; 
-            const redY = redCenterY - redSize / 2;
+            const featureTopHalfHeight = drawHeight / 2; 
+            const redCenterY = -featureTopHalfHeight / 2; 
+            const redY = redCenterY - redSize / 2; 
 
-            ctx.fillStyle = '#E32636'; // Bright Red (same as smelter base color for consistency)
+            ctx.fillStyle = '#E32636'; 
             ctx.fillRect(redX, redY, redSize, redSize);
         }
 
         /**
-         * Draws a blue square at the bottom of the smelter's or Tesla's middle block to indicate rotation point.
-         * Assumes the context is already translated to the center of the middle block (0, 0).
-         * @param {number} cellSize The original cell size (width/height).
-         * @param {number} widthRatio The height ratio of the feature (2/3).
+         * Draws internal details for Smelter/Tesla.
          */
         function drawSmelterCenterSquare(cellSize, widthRatio) {
-            const squareSize = cellSize * 0.4; // 40% of the cell width/height
+            const squareSize = cellSize * 0.4;
             const drawHeight = cellSize * widthRatio;
-            
-            // --- Vertical positioning ---
-            // 1. Get the height of the bottom half of the feature (from cell center (0) to feature bottom (drawHeight/2))
-            const featureBottomHalfHeight = drawHeight / 2;
-            
-            // 2. Center the square vertically within that bottom half [0, featureBottomHalfHeight]
-            // This offsets it from the center towards the bottom edge of the feature.
-            const blueCenterY = featureBottomHalfHeight / 2; 
-            
-            // 3. Calculate the top edge draw position (Y coordinate)
-            const blueY = blueCenterY - squareSize / 2;
-
-            // --- Drawing ---
-            ctx.fillStyle = '#1e90ff'; // Dodger Blue (Used for Smelter and Tesla detail)
-            // Center X in the cell, use calculated Y
             const blueX = -squareSize / 2;
+            const featureTopHalfHeight = drawHeight / 2; 
+            const blueCenterY = -featureTopHalfHeight / 2; 
+            const blueY = blueCenterY - squareSize / 2; 
+
+            ctx.fillStyle = '#1e90ff'; 
             ctx.fillRect(blueX, blueY, squareSize, squareSize);
         }
 
         /**
+         * Draws the cross detail for Tiled Floor.
+         */
+        function drawTiledFloorDetail(cellSize, isGhost) {
+            const crossWidth = cellSize * 0.15; 
+            const halfS = cellSize / 2;
+            
+            ctx.fillStyle = isGhost ? '#BBBBBB' : '#FFFFFF'; 
+
+            ctx.fillRect(-halfS, -crossWidth / 2, cellSize, crossWidth);
+            ctx.fillRect(-crossWidth / 2, -halfS, crossWidth, cellSize);
+        }
+
+        /**
          * Draws a single feature (placed or ghost) onto the canvas.
-         * @param {object} obj The feature object {type, row, col, rotation}.
-         * @param {number} originalCellSize The base size of a single cell.
-         * @param {number} scale The current zoom scale.
-         * @param {boolean} isGhost If true, applies transparency.
          */
         function drawFeature(obj, originalCellSize, scale, isGhost = false) {
             const config = OBJECT_CONFIGS[obj.type];
             if (!config) return;
-            if (obj.row < 0 || obj.col < 0) return; // Don't draw if ghost is off-screen
+            if (obj.row < 0 || obj.col < 0) return; 
 
-            // Apply transparency for ghost
             if (isGhost) {
-                ctx.globalAlpha = 0.33; // 33% transparency
+                ctx.globalAlpha = 0.33; 
             }
 
-            // 1. Calculate World Center of the middle cell (the placement anchor)
             const cellCenterX = obj.col * originalCellSize + originalCellSize / 2;
             const cellCenterY = obj.row * originalCellSize + originalCellSize / 2;
             
-            // Save context for object-specific rotation/translation
             ctx.save();
             
-            // Move origin to the object's center for rotation
+            const is3x1Feature = config.length > 1 && obj.type !== 'unknown';
+            const rotationOffset = is3x1Feature ? 90 : 0;
+            const rotationToApply = (obj.rotation + rotationOffset) % 360;
+            
             ctx.translate(cellCenterX, cellCenterY);
-            // Rotate (convert degrees to radians)
-            ctx.rotate(obj.rotation * Math.PI / 180);
+            ctx.rotate(rotationToApply * Math.PI / 180);
 
-            // Calculate half the cell size for easier centered drawing
             const S = originalCellSize;
             const halfS = S / 2;
 
-            // --- Logic for 3x1 features (Research, Smelter, Tesla) ---
-            if (config.length > 1) {
+            if (is3x1Feature) {
                 const featureTotalLength = originalCellSize * config.length; 
                 const drawLength = featureTotalLength; 
                 const drawHeight = originalCellSize * config.widthRatio;
-                
                 const featureDrawX = -drawLength / 2;
                 const featureDrawY = -drawHeight / 2;
 
-                // Draw the primary feature rectangle
                 ctx.fillStyle = config.color;
                 ctx.fillRect(featureDrawX, featureDrawY, drawLength, drawHeight);
 
-                // Add a border
                 ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
                 ctx.lineWidth = 2 / scale;
                 ctx.strokeRect(featureDrawX, featureDrawY, drawLength, drawHeight);
 
-                // Draw Details based on object type, if not too zoomed out
                 if (scale > 0.5) {
                     if (obj.type === 'research') {
                         drawResearchInternalDetail(originalCellSize, config.widthRatio);
@@ -281,29 +274,45 @@
                     }
                 }
             } 
-            // --- Logic for 1x1 Half-Square Fridge (Rotational) ---
             else if (obj.type === 'fridge') {
-                // Draw the gray half (always top half relative to the current rotation).
                 ctx.fillStyle = config.color;
-                ctx.fillRect(-halfS, -halfS, S, halfS); 
+                ctx.fillRect(-halfS, -halfS, halfS, S); 
 
-                // Draw the border around the full 1x1 cell
                 ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
                 ctx.lineWidth = 2 / scale;
                 ctx.strokeRect(-halfS, -halfS, S, S);
             }
-            // --- Logic for 1x1 Circle Workbench or Firepit ---
-            else if (obj.type === 'workbench' || obj.type === 'firepit') {
-                const radius = halfS * 0.9; // Radius is 90% of half the cell size (to leave a small gap/margin)
+            else if (obj.type === 'metal_wall' || obj.type === 'metal_door' || obj.type === 'unknown') {
+                // Drawing for 1x1 blocks including the new 'unknown' block
+                ctx.fillStyle = config.color;
+                ctx.fillRect(-halfS, -halfS, S, S); 
+
+                if (obj.type === 'metal_door' && scale > 0.5) {
+                    const detailSize = S * 0.3; 
+                    const detailX = -halfS; 
+                    const detailY = halfS - detailSize; 
+                    ctx.fillStyle = '#E32636'; 
+                    ctx.fillRect(detailX, detailY, detailSize, detailSize); 
+                }
+
+                ctx.strokeStyle = isGhost ? '#AAAAAA' : (obj.type === 'metal_wall' ? '#333333' : '#444444'); 
                 
-                // Draw the circle
+                // Special outline for UNKNOWN blocks
+                if (obj.type === 'unknown') {
+                     ctx.strokeStyle = isGhost ? 'rgba(255, 0, 0, 0.5)' : '#FF0000'; // Red outline for unknown blocks
+                }
+                
+                ctx.lineWidth = 2 / scale;
+                ctx.strokeRect(-halfS, -halfS, S, S);
+            }
+            else if (obj.type === 'workbench' || obj.type === 'firepit') {
+                const radius = halfS * 0.9; 
+                
                 ctx.fillStyle = config.color;
                 ctx.beginPath();
-                // Center (0, 0), Radius, Start Angle (0), End Angle (2 * PI)
                 ctx.arc(0, 0, radius, 0, 2 * Math.PI); 
                 ctx.fill();
 
-                // Add a border
                 ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
                 ctx.lineWidth = 2 / scale;
                 ctx.beginPath();
@@ -311,16 +320,76 @@
                 ctx.stroke();
 
             }
+            else if (obj.type === 'tiled_floor') {
+                ctx.fillStyle = config.color;
+                ctx.fillRect(-halfS, -halfS, S, S); 
+                
+                if (scale > 0.5) {
+                    drawTiledFloorDetail(S, isGhost);
+                }
+            }
 
-            // Restore context to undo rotation/translation
             ctx.restore();
             
-            // Reset global transparency if it was set
             if (isGhost) {
                 ctx.globalAlpha = 1.0;
             }
         }
 
+
+        /**
+         * Draws a line of ghost features for LINE mode or the clone preview.
+         */
+        function drawGhostLine(start, end, objectType, rotation, isDeletion = false, isCloneSelection = false) {
+            if (!start || !end) return;
+
+            const originalCellSize = baseSize / GRID_SIZE;
+
+            // Determine the bounding box (for LINE and DELETE/CLONE_SELECT mode)
+            const startX = Math.min(start.col, end.col);
+            const startY = Math.min(start.row, end.row);
+            const endX = Math.max(start.col, end.col);
+            const endY = Math.max(start.row, end.row);
+
+            // Draw bounding box for DELETE and CLONE_SELECT
+            if (isDeletion || isCloneSelection) {
+                const rectX = startX * originalCellSize;
+                const rectY = startY * originalCellSize;
+                const rectW = (endX - startX + 1) * originalCellSize;
+                const rectH = (endY - startY + 1) * originalCellSize;
+
+                if (isDeletion) {
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.2)'; // Semi-transparent red for deletion
+                    ctx.fillRect(rectX, rectY, rectW, rectH);
+                } else if (isCloneSelection) {
+                    ctx.fillStyle = 'rgba(255, 255, 0, 0.2)'; // Semi-transparent yellow for selection
+                    ctx.fillRect(rectX, rectY, rectW, rectH);
+                }
+                
+                ctx.strokeStyle = isDeletion ? 'red' : 'yellow';
+                ctx.lineWidth = 2 / scale;
+                ctx.strokeRect(rectX, rectY, rectW, rectH);
+                return;
+            }
+
+
+            // Draw actual features for LINE mode
+            const isHorizontal = Math.abs(end.col - start.col) >= Math.abs(end.row - start.row);
+            
+            if (isHorizontal) {
+                // Horizontal line (rows are the same or minimal change)
+                const fixedRow = Math.round((start.row + end.row) / 2);
+                for (let c = startX; c <= endX; c++) {
+                    drawFeature({ type: objectType, row: fixedRow, col: c, rotation: rotation }, originalCellSize, scale, true);
+                }
+            } else {
+                // Vertical line (columns are the same or minimal change)
+                const fixedCol = Math.round((start.col + end.col) / 2);
+                for (let r = startY; r <= endY; r++) {
+                    drawFeature({ type: objectType, row: r, col: fixedCol, rotation: rotation }, originalCellSize, scale, true);
+                }
+            }
+        }
 
         /**
          * Draws the 149x149 grid onto the canvas using current pan and zoom settings.
@@ -332,57 +401,286 @@
             ctx.fillStyle = BACKGROUND_COLOR;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 2. Save the context state before applying pan/zoom
             ctx.save();
-            
-            // Apply global pan and zoom transformations
             ctx.translate(panX, panY);
             ctx.scale(scale, scale);
 
-            // Calculate the size of a single cell at scale 1.0 (the base cell size)
             const originalCellSize = baseSize / GRID_SIZE;
 
-            // 3. Draw the filled grid area (this drawing will be transformed)
+            // 2. Draw the filled grid area and lines
             ctx.fillStyle = GRID_FILL_COLOR;
             ctx.fillRect(0, 0, baseSize, baseSize);
 
-            // 4. Draw the grid lines (transformed)
             ctx.strokeStyle = GRID_LINE_COLOR;
             ctx.lineWidth = 1 / scale; 
-            
             for (let i = 0; i <= GRID_SIZE; i++) {
                 const position = i * originalCellSize;
-                ctx.beginPath();
-                ctx.moveTo(position, 0);
-                ctx.lineTo(position, baseSize);
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.moveTo(0, position);
-                ctx.lineTo(baseSize, position);
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(position, 0); ctx.lineTo(position, baseSize); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, position); ctx.lineTo(baseSize, position); ctx.stroke();
             }
+
+            // 3. Draw Floor Objects
+            floorObjects.forEach(obj => {
+                drawFeature(obj, originalCellSize, scale, false);
+            });
             
-            // --- 5. Draw Ghost Preview ---
-            if (!isDragging && ghostRow >= 0 && ghostCol >= 0) {
-                 const ghostObject = {
-                    type: selectedObjectType,
-                    row: ghostRow,
-                    col: ghostCol,
-                    rotation: ghostRotation
-                 };
-                 drawFeature(ghostObject, originalCellSize, scale, true);
+            // 4. Draw Ghost Previews (Action or Single Placement)
+
+            // A. Drag Action Preview (Line, Delete, Clone Selection)
+            if (isDraggingForAction && dragStartCell && dragCurrentCell) {
+                if (currentMode === MODES.LINE) {
+                    drawGhostLine(dragStartCell, dragCurrentCell, selectedObjectType, ghostRotation);
+                } else if (currentMode === MODES.DELETE) {
+                    drawGhostLine(dragStartCell, dragCurrentCell, null, 0, true); // isDeletion = true
+                } else if (currentMode === MODES.CLONE && clonedArea === null) {
+                    drawGhostLine(dragStartCell, dragCurrentCell, null, 0, false, true); // isCloneSelection = true
+                }
             }
 
-            // --- 6. Draw Placed Special Objects ---
+            // B. Single Placement Ghost / Clone Placement Ghost
+            else if (!isDraggingForAction && ghostRow >= 0 && ghostCol >= 0) {
+                 if (currentMode === MODES.CLONE && clonedArea !== null) {
+                    // Draw CLONE Placement Ghost
+                    clonedArea.data.forEach(item => {
+                        const targetRow = ghostRow + item.offsetY;
+                        const targetCol = ghostCol + item.offsetX;
+                        drawFeature({ 
+                            type: item.type, 
+                            row: targetRow, 
+                            col: targetCol, 
+                            rotation: item.rotation 
+                        }, originalCellSize, scale, true);
+                    });
+                 } else if (currentMode !== MODES.DELETE) {
+                    // Draw normal single ghost (only if not in DELETE mode)
+                    const ghostObject = {
+                        type: selectedObjectType,
+                        row: ghostRow,
+                        col: ghostCol,
+                        rotation: selectedObjectType === 'tiled_floor' ? 0 : ghostRotation
+                    };
+                    drawFeature(ghostObject, originalCellSize, scale, true);
+                 }
+            }
+
+
+            // 5. Draw Placed Special Objects
             specialObjects.forEach(obj => {
                 drawFeature(obj, originalCellSize, scale, false);
             });
 
-            // 7. Restore the global context state
             ctx.restore();
         }
 
+        // --- Mode & Clone Logic ---
+
+        /**
+         * Sets the current mode and updates button styles.
+         */
+        function setMode(newMode) {
+            // If switching away from CLONE mode, clear any pending clone data
+            if (currentMode === MODES.CLONE && newMode !== MODES.CLONE) {
+                clonedArea = null;
+            }
+            
+            currentMode = newMode;
+            // Clear drag state
+            dragStartCell = null;
+            isDraggingForAction = false;
+            
+            // Update button styles
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'text-gray-900', 'ring-2', 'ring-yellow-300');
+                btn.classList.add('bg-gray-700', 'hover:bg-gray-600', 'text-white');
+            });
+
+            const activeBtn = document.getElementById(`mode-btn-${newMode}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600', 'text-white');
+                activeBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-gray-900', 'ring-2', 'ring-yellow-300');
+            }
+            
+            // Update mode display text
+            let modeText;
+            switch (newMode) {
+                case MODES.CLICK: modeText = 'Click (Single Place/Toggle)'; break;
+                case MODES.LINE: modeText = 'Line (Drag to Place)'; break;
+                case MODES.DELETE: modeText = 'Delete (Drag to Erase Area)'; break;
+                case MODES.CLONE: modeText = clonedArea ? 'Clone (Placement)' : 'Clone (Selection)'; break;
+                default: modeText = 'Unknown';
+            }
+            document.getElementById('current-mode-display').textContent = modeText;
+
+            drawGrid();
+        }
+
+        /**
+         * Places the selected object along a line from start to end.
+         */
+        function applyLinePlacement(start, end, objectType, rotation) {
+            if (!start || !end) return;
+
+            const startX = Math.min(start.col, end.col);
+            const startY = Math.min(start.row, end.row);
+            const endX = Math.max(start.col, end.col);
+            const endY = Math.max(start.row, end.row);
+
+            const isHorizontal = Math.abs(end.col - start.col) >= Math.abs(end.row - start.row);
+            
+            if (objectType === 'tiled_floor') {
+                for (let r = startY; r <= endY; r++) {
+                    for (let c = startX; c <= endX; c++) {
+                        // Place floor tiles in every cell of the bounding box
+                        const existingIndex = floorObjects.findIndex(obj => obj.row === r && obj.col === c);
+                        if (existingIndex === -1) {
+                            floorObjects.push({
+                                type: objectType, row: r, col: c, id: KNOWN_INTEGER_IDS[objectType], rotation: 0
+                            });
+                        }
+                    }
+                }
+            } else {
+                // Place standard features along the axis of the drag
+                if (isHorizontal) {
+                    const fixedRow = Math.round((start.row + end.row) / 2);
+                    for (let c = startX; c <= endX; c++) {
+                        const isOccupied = specialObjects.some(obj => obj.row === fixedRow && obj.col === c);
+                        if (!isOccupied) {
+                            specialObjects.push({ 
+                                type: objectType, row: fixedRow, col: c, id: KNOWN_INTEGER_IDS[objectType], rotation: rotation 
+                            });
+                        }
+                    }
+                } else {
+                    const fixedCol = Math.round((start.col + end.col) / 2);
+                    for (let r = startY; r <= endY; r++) {
+                        const isOccupied = specialObjects.some(obj => obj.row === r && obj.col === fixedCol);
+                         if (!isOccupied) {
+                            specialObjects.push({ 
+                                type: objectType, row: r, col: fixedCol, id: KNOWN_INTEGER_IDS[objectType], rotation: rotation 
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        /**
+         * Deletes all objects (floor and special) within the drag area.
+         */
+        function applyLineDeletion(start, end) {
+            if (!start || !end) return;
+
+            const startX = Math.min(start.col, end.col);
+            const startY = Math.min(start.row, end.row);
+            const endX = Math.max(start.col, end.col);
+            const endY = Math.max(start.row, end.row);
+
+            specialObjects = specialObjects.filter(obj => 
+                !(obj.col >= startX && obj.col <= endX && obj.row >= startY && obj.row <= endY)
+            );
+
+            floorObjects = floorObjects.filter(obj => 
+                !(obj.col >= startX && obj.col <= endX && obj.row >= startY && obj.row <= endY)
+            );
+        }
+
+        /**
+         * Handles the end of a CLONE selection drag.
+         */
+        function handleCloneSelection(start, end) {
+            if (!start || !end) return;
+
+            const startX = Math.min(start.col, end.col);
+            const startY = Math.min(start.row, end.row);
+            const endX = Math.max(start.col, end.col);
+            const endY = Math.max(start.row, end.row);
+
+            const copiedItems = [];
+
+            // Copy special objects
+            [...specialObjects, ...floorObjects].forEach(obj => {
+                if (obj.col >= startX && obj.col <= endX && obj.row >= startY && obj.row <= endY) {
+                    copiedItems.push({
+                        type: obj.type,
+                        id: obj.id,
+                        rotation: obj.rotation,
+                        // Calculate offset relative to the top-left corner of the selection
+                        offsetX: obj.col - startX,
+                        offsetY: obj.row - startY,
+                    });
+                }
+            });
+
+            if (copiedItems.length > 0) {
+                clonedArea = {
+                    width: endX - startX + 1,
+                    height: endY - startY + 1,
+                    data: copiedItems
+                };
+                document.getElementById('current-mode-display').textContent = 'Clone (Placement)';
+            } else {
+                clonedArea = null;
+                document.getElementById('current-mode-display').textContent = 'Clone (Selection)';
+            }
+            
+            drawGrid(); 
+        }
+        
+        /**
+         * Places the stored clonedArea at the given cell.
+         */
+        function applyClonedArea(targetCell) {
+            if (!clonedArea || !targetCell) return;
+
+            clonedArea.data.forEach(item => {
+                const targetRow = targetCell.row + item.offsetY;
+                const targetCol = targetCell.col + item.offsetX;
+
+                const newItem = {
+                    type: item.type,
+                    row: targetRow,
+                    col: targetCol,
+                    id: item.id,
+                    rotation: item.rotation 
+                };
+
+                // Check bounds
+                if (targetRow < 0 || targetRow >= GRID_SIZE || targetCol < 0 || targetCol >= GRID_SIZE) return;
+
+                if (item.type === 'tiled_floor') {
+                    // Only add if floor cell is empty
+                    const existingIndex = floorObjects.findIndex(obj => obj.row === targetRow && obj.col === targetCol);
+                    if (existingIndex === -1) {
+                        floorObjects.push(newItem);
+                    }
+                } else {
+                    // Only add if feature cell is empty
+                    const isOccupied = specialObjects.some(obj => obj.row === targetRow && obj.col === targetCol);
+                    if (!isOccupied) {
+                        specialObjects.push(newItem);
+                    }
+                }
+            });
+
+            clonedArea = null; // Reset clone area for new selection
+            setMode(MODES.CLICK); // Switch back to Click mode
+            drawGrid();
+        }
+
+        // --- Core Event Handlers ---
+        
+        /**
+         * Calculates the size of the square canvas based on the viewport.
+         */
+        function updateBaseSize() {
+            const padding = 80; 
+            let size = Math.min(window.innerWidth, window.innerHeight) - padding;
+            baseSize = Math.max(size, 300);
+            canvas.width = baseSize;
+            canvas.height = baseSize;
+        }
+        
         /**
          * Handles the mouse wheel event for zooming in and out.
          */
@@ -396,9 +694,11 @@
             const mouseX = event.clientX - rect.left;
             const mouseY = event.clientY - rect.top;
 
+            // Calculate the world coordinates of the mouse position
             const worldX = (mouseX - panX) / scale;
             const worldY = (mouseY - panY) / scale;
 
+            // Adjust pan based on the new scale to keep the mouse point fixed
             panX = mouseX - worldX * newScale;
             panY = mouseY - worldY * newScale;
 
@@ -406,66 +706,97 @@
             drawGrid();
         }
 
-        /**
-         * Handles the start of a pan (middle mouse button down) or drag check (left mouse button down).
-         */
         function handleMouseDown(event) {
-            isDragging = true; // Track that A button is down
-            isPanning = false; // Initial click, not a pan yet
+            // Check if the modal is open, if so, prevent interaction with the canvas
+            if (helpModalOverlay.classList.contains('visible')) return;
+
+            isDragging = true;
+            isPanning = false;
             clickStartX = event.clientX;
             clickStartY = event.clientY;
-            
+
+            const rect = canvas.getBoundingClientRect();
+            const cell = getCellFromScreenCoords(event.clientX - rect.left, event.clientY - rect.top);
+
             if (event.button === 1) { // Middle Click (for panning)
-                event.preventDefault(); // Prevent default scroll behavior
+                event.preventDefault(); 
                 canvas.style.cursor = 'grabbing';
                 lastPanX = event.clientX;
                 lastPanY = event.clientY;
             } 
+            
+            if (event.button === 0 && cell) { // Left Click for action modes
+                isDraggingForAction = true;
+                dragStartCell = cell;
+                dragCurrentCell = cell;
+            }
 
-            // Hide ghost when a button is pressed
             ghostRow = -1;
             ghostCol = -1;
             drawGrid(); 
         }
 
-        /**
-         * Handles the end of a pan (mouse up or leave).
-         */
-        function handleMouseUp() {
+        function handleMouseUp(event) {
+            // Check if the modal is open, if so, ignore
+            if (helpModalOverlay.classList.contains('visible')) return;
+
+            const rect = canvas.getBoundingClientRect();
+            // Fallback for event if it's null (e.g., from mouseleave handler)
+            const clientX = event ? event.clientX : clickStartX; 
+            const clientY = event ? event.clientY : clickStartY;
+            
+            const cell = getCellFromScreenCoords(clientX - rect.left, clientY - rect.top);
+            
+            if (isDraggingForAction && cell && dragStartCell) {
+                // Finalize action for drag modes
+                if (currentMode === MODES.LINE) {
+                    applyLinePlacement(dragStartCell, cell, selectedObjectType, ghostRotation);
+                } else if (currentMode === MODES.DELETE) {
+                    applyLineDeletion(dragStartCell, cell);
+                } else if (currentMode === MODES.CLONE && clonedArea === null) {
+                    handleCloneSelection(dragStartCell, cell);
+                }
+            }
+            
             isDragging = false;
-            canvas.style.cursor = 'grab'; // Reset cursor
+            isDraggingForAction = false;
+            dragStartCell = null;
+            dragCurrentCell = null;
+            canvas.style.cursor = 'grab';
+            drawGrid();
         }
 
-        /**
-         * Handles mouse movement for panning (middle button) and drag detection (left button) or ghost preview.
-         */
         function handleMouseMove(event) {
+            // Check if the modal is open, if so, ignore
+            if (helpModalOverlay.classList.contains('visible')) return;
+
             const rect = canvas.getBoundingClientRect();
             const mouseX = event.clientX - rect.left;
             const mouseY = event.clientY - rect.top;
+            const cell = getCellFromScreenCoords(mouseX, mouseY);
 
             if (isDragging) {
-                // Check if the middle button (bit 4) is currently held down
                 const isMiddleButtonDown = event.buttons & 4; 
                 
                 if (isMiddleButtonDown) {
-                    // Panning logic (only for middle button)
+                    // Panning
                     const dx = event.clientX - lastPanX;
                     const dy = event.clientY - lastPanY;
-
                     panX += dx;
                     panY += dy;
-
                     lastPanX = event.clientX;
                     lastPanY = event.clientY;
-
                     isPanning = true; 
-                    
                 } else if (event.buttons & 1) {
-                    // Left button (bit 1) held down - check for drag to prevent click placement (no panning)
+                    // Left button held down - check for drag to prevent click placement (only applies to CLICK mode)
                     const totalDistMoved = Math.hypot(event.clientX - clickStartX, event.clientY - clickStartY);
                     if (totalDistMoved > DRAG_THRESHOLD) {
-                        isPanning = true; // Prevents placement on mouseup/click
+                        isPanning = true; 
+                    }
+                    
+                    // Update dragCurrentCell for drag action previews (LINE, DELETE, CLONE_SELECT)
+                    if (isDraggingForAction && cell) {
+                        dragCurrentCell = cell;
                     }
                 }
                 
@@ -473,7 +804,6 @@
                 
             } else {
                 // Not dragging, update ghost position
-                const cell = getCellFromScreenCoords(mouseX, mouseY);
                 if (cell && (cell.row !== ghostRow || cell.col !== ghostCol)) {
                     ghostRow = cell.row;
                     ghostCol = cell.col;
@@ -486,39 +816,30 @@
             }
         }
 
-        /**
-         * Handles key presses (WASD, R) for panning and ghost rotation.
-         */
         function handleKeyDown(event) {
-            const panSpeed = 30; // Base speed for panning
-            let moved = false;
+            // Do not handle controls if the help modal is open, except for 'H'
+            if (helpModalOverlay.classList.contains('visible') && event.key.toLowerCase() !== 'h') return;
             
-            // Movement amount is scaled inversely with zoom level for consistent movement speed
+            const panSpeed = 30; 
+            let moved = false;
             const distance = panSpeed / scale; 
 
             switch (event.key.toLowerCase()) {
-                case 'w': // Up
-                    panY += distance;
-                    moved = true;
-                    break;
-                case 's': // Down
-                    panY -= distance;
-                    moved = true;
-                    break;
-                case 'a': // Left
-                    panX += distance;
-                    moved = true;
-                    break;
-                case 'd': // Right
-                    panX -= distance;
-                    moved = true;
-                    break;
+                case 'w': panY += distance; moved = true; break;
+                case 's': panY -= distance; moved = true; break;
+                case 'a': panX += distance; moved = true; break;
+                case 'd': panX -= distance; moved = true; break;
                 
-                case 'r': // Rotate only the ghost preview
-                    event.preventDefault(); // Prevent default browser actions
-                    // Rotate by 90 degrees, wrap at 360
-                    ghostRotation = (ghostRotation + 90) % 360; 
-                    moved = true; // Force redraw to show new rotation
+                case 'r': 
+                    event.preventDefault(); 
+                    if (selectedObjectType !== 'tiled_floor') {
+                        ghostRotation = (ghostRotation + 90) % 360; 
+                        moved = true; 
+                    }
+                    break;
+                case 'h':
+                    event.preventDefault();
+                    toggleHelpModal();
                     break;
             }
 
@@ -527,142 +848,218 @@
             }
         }
 
-        /**
-         * Handles click event for placing objects.
-         */
         function handleCanvasClick(event) {
-            // Check if the event was a middle click (which would be for panning)
-            if (event.button !== 0) {
-                return;
-            }
+            if (helpModalOverlay.classList.contains('visible')) return;
 
-            // If significant panning/dragging occurred during this cycle, prevent placement.
-            if (isPanning) {
-                isPanning = false; // Reset the flag for the next interaction
+            if (event.button !== 0 || isPanning || isDraggingForAction) {
+                isPanning = false; // Reset for next cycle
                 return;
             }
 
             const cell = getCellFromScreenCoords(event.clientX - canvas.getBoundingClientRect().left, 
                                                 event.clientY - canvas.getBoundingClientRect().top);
 
-            if (cell) {
+            if (!cell) return;
+
+            if (currentMode === MODES.CLONE && clonedArea !== null) {
+                // CLONE Placement Click
+                applyClonedArea(cell);
+                return; // applyClonedArea resets the mode and redraws
+            }
+
+            if (currentMode === MODES.CLICK) {
+                // Standard Single Click Placement/Removal
                 const config = OBJECT_CONFIGS[selectedObjectType];
                 if (!config) return;
 
-                // Check if the clicked cell (which is the center) is already occupied
-                const isOccupied = specialObjects.some(obj => 
-                    obj.row === cell.row && obj.col === cell.col
-                );
-
-                if (!isOccupied) {
-                    // Place the new object using the current ghost rotation
-                    
-                    let newId;
-                    // Use known integer IDs if applicable, otherwise use a generic UUID string (for 3x1 items)
-                    if (KNOWN_INTEGER_IDS[selectedObjectType] !== undefined) {
-                        newId = KNOWN_INTEGER_IDS[selectedObjectType];
+                if (selectedObjectType === 'tiled_floor') {
+                    const index = floorObjects.findIndex(obj => obj.row === cell.row && obj.col === cell.col);
+                    if (index === -1) {
+                        floorObjects.push({
+                            type: selectedObjectType, row: cell.row, col: cell.col, id: KNOWN_INTEGER_IDS[selectedObjectType], rotation: 0
+                        });
                     } else {
-                        // For 3x1 items, we use a random string ID
-                        newId = crypto.randomUUID(); 
+                        floorObjects.splice(index, 1);
                     }
-
-                    specialObjects.push({
-                        type: selectedObjectType,
-                        row: cell.row,
-                        col: cell.col,
-                        id: newId,
-                        rotation: ghostRotation // Use the rotation from the ghost preview
-                    });
-                    
-                    document.getElementById('placement-status').textContent = 
-                        `${config.name} placed at (${cell.row}, ${cell.col}) @ ${ghostRotation}°`;
                 } else {
-                    // Remove existing object if clicked again (simple toggle)
-                    const initialCount = specialObjects.length;
-                    specialObjects = specialObjects.filter(obj => 
-                        !(obj.row === cell.row && obj.col === cell.col)
-                    );
+                    // Check special objects and floor objects for occupancy
+                    const isOccupied = [...specialObjects, ...floorObjects].some(obj => obj.row === cell.row && obj.col === cell.col);
 
-                    if (specialObjects.length < initialCount) {
-                         document.getElementById('placement-status').textContent = 
-                        `Removed item at (${cell.row}, ${cell.col})`;
+                    if (!isOccupied) {
+                        let newId = KNOWN_INTEGER_IDS[selectedObjectType] || 0; 
+
+                        specialObjects.push({
+                            type: selectedObjectType, row: cell.row, col: cell.col, id: newId, rotation: ghostRotation 
+                        });
                     } else {
-                        document.getElementById('placement-status').textContent = 
-                        `Cell (${cell.row}, ${cell.col}) already occupied by a feature center.`;
+                        // Remove if already occupied (simple toggle)
+                        specialObjects = specialObjects.filter(obj => 
+                            !(obj.row === cell.row && obj.col === cell.col)
+                        );
+                        floorObjects = floorObjects.filter(obj => 
+                            !(obj.row === cell.row && obj.col === cell.col)
+                        );
                     }
                 }
-
                 drawGrid();
             }
         }
 
-        /**
-         * Generates the map code array in the custom string format: !b={id}::{x}:{y}:{r}!b={id2}::...
-         */
         function generateMapCode() {
-            // Map the objects to the custom string format
-            const codeString = specialObjects.map(obj => {
+            const rotationToCode = { 0: 0, 90: 1, 180: 2, 270: 3 };
+            // Ensure unknown IDs are also exported correctly
+            const allObjects = [...floorObjects, ...specialObjects]; 
+
+            const codeString = allObjects.map(obj => {
                 const id = obj.id;
-                const x = obj.col; // x coordinate is the column
-                const y = obj.row; // y coordinate is the row
-                const r = obj.rotation;
-
-                // Format: !b={id}::{x}:{y}:{r} 
-                // Using '::' for the empty second ID as requested.
-                return `!b=${id}::${x}:${y}:${r}`;
-            }).join(''); // Join all item strings together without separators
-
+                const x = obj.col; 
+                const y = obj.row; 
+                // Use the original rotation if it's an unknown block, otherwise use the mapped code
+                const r = rotationToCode[obj.rotation] !== undefined ? rotationToCode[obj.rotation] : 0; 
+                return `!b=${id}:${x}:${y}:${r}`;
+            }).join(''); 
             
             document.getElementById('map-code-output').value = codeString;
             document.getElementById('code-output-container').classList.remove('hidden');
-            
-            // Update status and scroll to the code output
-            document.getElementById('placement-status').textContent = 
-                `Map code generated in custom string format for ${specialObjects.length} items. Scroll down to copy.`;
-            
             document.getElementById('code-output-container').scrollIntoView({ behavior: 'smooth' });
         }
-
+        
         /**
-         * Copies the generated custom code string to the clipboard.
+         * Parses the map code string and updates the global map arrays.
+         * This implements the requested feature.
          */
-        function copyCode() {
-            const output = document.getElementById('map-code-output');
-            output.select();
-            output.setSelectionRange(0, 99999); // For mobile devices
+        function loadMapFromCode() {
+            const code = document.getElementById('map-code-input').value;
+
+            // Clear existing objects
+            specialObjects = [];
+            floorObjects = [];
             
-            // Execute the copy command
-            try {
-                document.execCommand('copy');
-                document.getElementById('placement-status').textContent = 
-                    'Map code successfully copied to clipboard!';
-            } catch (err) {
-                document.getElementById('placement-status').textContent = 
-                    'Failed to copy code. Please copy manually from the box.';
+            // Regex to find all block definitions: !b=ID:X:Y:R
+            const blockRegex = /!b=(\d+):(\d+):(\d+):(\d+)/g;
+            let match;
+            let blocksLoaded = 0;
+            let unknownBlocksCount = 0;
+
+            const rotationCodeToDegrees = { 0: 0, 1: 90, 2: 180, 3: 270 };
+
+            while ((match = blockRegex.exec(code)) !== null) {
+                const id = parseInt(match[1]);
+                const col = parseInt(match[2]);
+                const row = parseInt(match[3]);
+                const rotationCode = parseInt(match[4]);
+                
+                // Skip if outside grid bounds
+                if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) continue;
+                
+                let objectType = ID_TO_TYPE[id];
+                let rotation = rotationCodeToDegrees[rotationCode] || 0; 
+                
+                // Handle Unknown ID
+                if (!objectType) {
+                    objectType = 'unknown';
+                    unknownBlocksCount++;
+                }
+                
+                const newObject = {
+                    type: objectType,
+                    row: row,
+                    col: col,
+                    id: id, 
+                    rotation: rotation
+                };
+                
+                // Decide if it's a floor tile or a special feature
+                // Tiled floor is handled separately to allow features to be placed over it.
+                if (newObject.type === 'tiled_floor') {
+                     floorObjects.push(newObject);
+                } else {
+                     specialObjects.push(newObject);
+                }
+                
+                blocksLoaded++;
+            }
+
+            if (blocksLoaded > 0) {
+                // Reset pan and zoom to show the overall map better
+                scale = 1.0;
+                panX = 0;
+                panY = 0;
+                drawGrid();
+                clonedArea = null; 
+                
+                let message = `Successfully loaded ${blocksLoaded} blocks.`;
+                if (unknownBlocksCount > 0) {
+                    message += ` Found **${unknownBlocksCount} unknown block IDs** which are displayed as solid black squares.`;
+                }
+                console.log(message);
+            } else {
+                console.warn('No valid blocks found in the pasted code.');
             }
         }
 
-
-        /**
-         * Handles change on the item selection dropdown.
-         */
-        function handleItemChange(event) {
-            selectedObjectType = event.target.value;
-            // Reset ghost rotation when changing object type
-            ghostRotation = 0; 
-            document.getElementById('placement-status').textContent = 
-                `Ready to place: ${OBJECT_CONFIGS[selectedObjectType].name}`;
+        function copyCode() {
+            const output = document.getElementById('map-code-output');
+            output.select();
+            output.setSelectionRange(0, 99999); 
+            
+            try {
+                // Use document.execCommand('copy') for better compatibility in iFrames
+                document.execCommand('copy');
+            } catch (err) {
+                console.error('Failed to copy code', err);
+            }
         }
 
+        function handleItemChange(event) {
+            selectedObjectType = event.target.value;
+            
+            const is3x1Feature = ['research', 'smelter', 'tesla'].includes(selectedObjectType);
+
+            if (is3x1Feature) {
+                ghostRotation = 0; 
+            } else {
+                ghostRotation = 0; 
+            }
+            // Clear clone data if selected item changes
+            if (currentMode === MODES.CLONE) {
+                clonedArea = null;
+                setMode(MODES.CLONE); // Re-set mode to update display text to "Selection"
+            }
+            drawGrid();
+        }
+        
+        // --- Help Modal Logic (Kept from previous version) ---
+
         /**
-         * Initialization function
+         * Toggles the visibility of the help modal.
          */
+        window.toggleHelpModal = () => {
+            const isVisible = helpModalOverlay.classList.toggle('visible');
+            if (!isVisible) {
+                 // When hiding, set the overlay to hidden after the transition completes
+                setTimeout(() => {
+                    helpModalOverlay.classList.add('hidden');
+                }, 300);
+            } else {
+                // When showing, remove hidden class immediately
+                helpModalOverlay.classList.remove('hidden');
+            }
+        };
+
+
         function init() {
             canvas = document.getElementById('gridCanvas');
             ctx = canvas.getContext('2d');
+            helpModalOverlay = document.getElementById('helpModalOverlay');
+            helpModal = document.getElementById('helpModal');
 
-            // Set initial base size and draw
+
             updateBaseSize();
+            
+            // Initialize mode to CLICK
+            setMode(MODES.CLICK); 
+            
             drawGrid();
 
             // Setup Event Listeners
@@ -670,93 +1067,170 @@
                 updateBaseSize();
                 drawGrid();
             });
+
+            // Re-adding all core map editor listeners
             canvas.addEventListener('wheel', handleWheel);
-            
-            // Mouse interaction listeners
             canvas.addEventListener('mousedown', handleMouseDown);
             canvas.addEventListener('mouseup', handleMouseUp);
             canvas.addEventListener('mouseleave', () => {
-                handleMouseUp();
-                // Hide ghost when cursor leaves canvas
+                handleMouseUp(null); // Pass null event to indicate mouseleave
                 ghostRow = -1;
                 ghostCol = -1;
                 drawGrid();
             });
             canvas.addEventListener('mousemove', handleMouseMove);
-            
-            // Placement listener (use click after mouseup/mousemove handlers)
             canvas.addEventListener('click', handleCanvasClick);
-
-            // Listen on the document so keys work even if the canvas is not explicitly focused
             document.addEventListener('keydown', handleKeyDown); 
-            
-            // Code generation buttons
+
+            // Initialize buttons and dropdown
             document.getElementById('generate-code-btn').addEventListener('click', generateMapCode);
             document.getElementById('copy-code-btn').addEventListener('click', copyCode);
+            document.getElementById('load-map-btn').addEventListener('click', loadMapFromCode); // NEW: Load map button
 
-
-            // Initialize the dropdown options
             const select = document.getElementById('item-select');
-            // Clear existing options just in case (though only one init runs)
             select.innerHTML = ''; 
             for (const key in OBJECT_CONFIGS) {
-                const option = document.createElement('option');
-                option.value = key;
-                option.textContent = OBJECT_CONFIGS[key].name;
-                select.appendChild(option);
+                // Exclude the 'unknown' block from the manual selection dropdown
+                if (key !== 'unknown') {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = OBJECT_CONFIGS[key].name;
+                    select.appendChild(option);
+                }
             }
-            select.value = selectedObjectType; // Set the default selected value
+            select.value = selectedObjectType; 
             select.addEventListener('change', handleItemChange);
 
-            // Set initial status message
-            document.getElementById('placement-status').textContent = 
-                `Ready to place: ${OBJECT_CONFIGS[selectedObjectType].name}`;
+            document.getElementById('mode-btn-click').addEventListener('click', () => setMode(MODES.CLICK));
+            document.getElementById('mode-btn-line').addEventListener('click', () => setMode(MODES.LINE));
+            document.getElementById('mode-btn-delete').addEventListener('click', () => setMode(MODES.DELETE));
+            document.getElementById('mode-btn-clone').addEventListener('click', () => {
+                if (currentMode === MODES.CLONE && clonedArea !== null) {
+                    // If in clone placement mode, clicking clone button resets selection and stays in clone selection mode
+                    clonedArea = null;
+                    drawGrid();
+                }
+                setMode(MODES.CLONE);
+            });
+            
+            // Initial modal display
+            helpModalOverlay.classList.add('visible');
+            helpModalOverlay.classList.remove('hidden');
         }
 
         // Run the initialization once the DOM is fully loaded
         window.onload = init;
     </script>
 </head>
-<body class="flex flex-col items-center justify-start p-4 h-screen">
+<body class="flex flex-col items-center justify-start h-screen">
 
-    <!-- Header and Information -->
-    <div class="text-white text-center mb-4 mt-4 relative w-full max-w-7xl">
-        <h1 class="text-3xl font-bold mb-2">149x149 Grid Map Editor</h1>
-        <p class="text-sm text-gray-400">
-            Use the **Scroll Wheel** to zoom, **WASD** keys or **Middle Mouse Click & Drag** to pan. Press **R** to rotate the **ghost preview**.
-        </p>
-        
-        <!-- Dropdown Menu for Placement and GENERATE BUTTON (Top Right) -->
-        <div class="absolute top-0 right-0 p-3 bg-gray-700/50 rounded-lg shadow-xl backdrop-blur-sm flex flex-col items-stretch space-y-2">
-            <label for="item-select" class="text-xs text-gray-200 block mb-1">Place Feature:</label>
-            <select id="item-select" class="p-2 text-sm bg-gray-800 text-white border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-150">
-                <!-- Options populated by JS -->
-            </select>
-            <p id="placement-status" class="text-xs text-blue-300 mt-2 h-4"></p>
+    <div class="app-container">
+        <!-- Header and Information -->
+        <div class="text-white text-center mb-4 mt-4 relative w-full max-w-7xl">
+            <h1 id="main-title" class="text-3xl font-bold text-white mb-2 shadow-lg p-2 rounded-lg bg-indigo-700/50">
+                Devast Base Editor
+            </h1>
+            <p class="text-sm text-gray-400">
+                Current Mode: <span id="current-mode-display" class="font-semibold text-yellow-400">Click (Single Place/Toggle)</span>. Press **H** for help/controls.
+            </p>
+            
+            <!-- Dropdown Menu and Controls (Top Right Panel) -->
+            <div class="absolute top-0 right-0 p-3 bg-gray-700/50 rounded-lg shadow-xl backdrop-blur-sm flex flex-col items-stretch space-y-2 max-w-xs md:max-w-none">
+                
+                <!-- MODE SELECTION BUTTONS -->
+                <div class="flex justify-between space-x-2 p-1 bg-gray-800 rounded-md">
+                    <button id="mode-btn-click" class="mode-btn" title="Click Mode (Single Place/Toggle)">
+                        🖱️
+                    </button>
+                    <button id="mode-btn-line" class="mode-btn" title="Line Mode (Drag to Place)">
+                        📏
+                    </button>
+                    <button id="mode-btn-clone" class="mode-btn" title="Clone Mode (Drag to Select Area, Click to Place)">
+                        📋
+                    </button>
+                    <button id="mode-btn-delete" class="mode-btn" title="Delete Mode (Drag to Erase Area)">
+                        🗑️
+                    </button>
+                </div>
 
-            <!-- CODE GENERATION BUTTON (New Location) -->
-            <button id="generate-code-btn" class="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm rounded-md shadow-lg transition duration-200 transform hover:scale-[1.02]">
-                Generate Map Code
+                <!-- ITEM SELECTION -->
+                <label for="item-select" class="text-xs text-gray-200 block mt-2">Place Feature:</label>
+                <select id="item-select" class="p-2 text-sm bg-gray-800 text-white border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-150" onchange="handleItemChange(event)">
+                    <!-- Options populated by JS -->
+                </select>
+
+                <!-- CODE GENERATION BUTTON -->
+                <button id="generate-code-btn" class="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm rounded-md shadow-lg transition duration-200 transform hover:scale-[1.02]">
+                    Generate Map Code
+                </button>
+
+            </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="flex flex-grow items-center justify-center w-full max-w-full rounded-xl mb-4">
+            <canvas id="gridCanvas"></canvas>
+        </div>
+
+
+        <!-- Code Output & Input Section -->
+        <div id="code-output-container" class="w-full max-w-4xl p-4 bg-gray-800 rounded-lg shadow-2xl mb-8">
+            
+            <h2 class="text-xl font-bold text-gray-100 mb-3">Map Code Interface</h2>
+            
+            <!-- Input Area for Loading (New) -->
+            <div class="mb-4">
+                <label for="map-code-input" class="text-gray-300 text-sm mb-1 block">Paste Map Code to Load Blocks:</label>
+                <textarea id="map-code-input" rows="3" class="w-full p-3 bg-gray-900 text-yellow-300 border border-gray-700 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Paste your !b=ID:X:Y:R code string here..."></textarea>
+                <button id="load-map-btn" class="mt-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md transition duration-150">
+                    Load Map
+                </button>
+            </div>
+            
+            <hr class="border-gray-700 mb-4">
+
+            <!-- Output Area for Exporting -->
+            <label for="map-code-output" class="text-gray-300 text-sm mb-1 block">Generated Map Code (Export):</label>
+            <textarea id="map-code-output" rows="5" class="w-full p-3 bg-gray-900 text-green-300 border border-gray-700 rounded-md"></textarea>
+            <button id="copy-code-btn" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition duration-150">
+                Copy Code to Clipboard
             </button>
+        </div>
 
+    </div>
+
+    <!-- Help/Controls Pop-up Modal (Kept the same) -->
+    <div id="helpModalOverlay" class="modal-overlay hidden">
+        <div id="helpModal" class="modal-content bg-gray-800 text-white p-6 rounded-xl shadow-2xl w-full max-w-lg border-2 border-indigo-500">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-2xl font-extrabold text-indigo-400">Base Editor Controls & Modes</h2>
+                <button onclick="toggleHelpModal()" class="text-gray-300 hover:text-white transition duration-150 p-1 rounded-full bg-gray-700 hover:bg-red-600 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="border-t border-indigo-700 pt-4 space-y-4">
+                <h3 class="text-xl font-semibold text-indigo-300">Navigation</h3>
+                <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
+                    <li>**Zoom**: Use the **Scroll Wheel** (or pinch on touch devices).</li>
+                    <li>**Pan/Move**: Use **WASD** keys or **Middle Mouse Click & Drag**.</li>
+                    <li>**Rotate Ghost Preview**: Press **R** to rotate the object ghost before placing (only for applicable items).</li>
+                    <li>**Toggle Help**: Press **H** to show/hide this modal.</li>
+                </ul>
+
+                <h3 class="text-xl font-semibold text-indigo-300">Placement Modes</h3>
+                <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
+                    <li>**Click (🖱️)**: Single click to place or remove the selected object.</li>
+                    <li>**Line (📏)**: Click and drag to quickly place objects in a straight line (horizontal or vertical).</li>
+                    <li>**Clone (📋)**: First drag a box to select an area, then click to place the copy of that area.</li>
+                    <li>**Delete (🗑️)**: Click and drag a box to delete all objects within that area.</li>
+                </ul>
+            </div>
+            
+            <div class="mt-6 text-center text-sm text-gray-500 border-t border-gray-700 pt-3">
+                <p>The base grid is **149x149**. Start building by closing this window!</p>
+            </div>
         </div>
     </div>
-
-    <!-- Canvas Container -->
-    <div class="flex flex-grow items-center justify-center w-full max-w-full rounded-xl mb-4">
-        <canvas id="gridCanvas"></canvas>
-    </div>
-
-
-    <!-- Code Output Section (Initially hidden) -->
-    <div id="code-output-container" class="hidden w-full max-w-4xl p-4 bg-gray-800 rounded-lg shadow-2xl mb-8">
-        <h2 class="text-xl font-bold text-gray-100 mb-3">Devast.io Map Code Output (Custom String)</h2>
-        <textarea id="map-code-output" rows="10" class="w-full p-3 bg-gray-900 text-green-300 border border-gray-700 rounded-md"></textarea>
-        <!-- This is the Copy Code button, which calls the copyCode function -->
-        <button id="copy-code-btn" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition duration-150">
-            Copy Code to Clipboard
-        </button>
-    </div>
-
 </body>
 </html>
