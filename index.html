@@ -192,6 +192,14 @@
 
             return { row: clampedRow, col: clampedCol };
         }
+        
+        /**
+         * Updates the block counter display based on the total number of placed objects.
+         */
+        function updateBlockCount() {
+            const totalBlocks = specialObjects.length + floorObjects.length;
+            document.getElementById('block-count').textContent = totalBlocks;
+        }
 
         /**
          * Draws internal details for the Research object.
@@ -531,7 +539,7 @@
          */
         function setMode(newMode) {
             // If switching away from CLONE mode, clear any pending clone data
-            if (currentMode === MODES.CLopeN && newMode !== MODES.CLONE) {
+            if (currentMode === MODES.CLONE && newMode !== MODES.CLONE) {
                 clonedArea = null;
             }
             
@@ -615,6 +623,7 @@
                     }
                 }
             }
+            updateBlockCount(); // Update counter after placement
         }
 
         /**
@@ -635,6 +644,8 @@
             floorObjects = floorObjects.filter(obj => 
                 !(obj.col >= startX && obj.col <= endX && obj.row >= startY && obj.row <= endY)
             );
+            
+            updateBlockCount(); // Update counter after deletion
         }
 
         /**
@@ -717,6 +728,7 @@
 
             clonedArea = null; // Reset clone area for new selection
             setMode(MODES.CLICK); // Switch back to Click mode
+            updateBlockCount(); // Update counter after placement
             drawGrid();
         }
 
@@ -926,14 +938,18 @@
                 const config = OBJECT_CONFIGS[selectedObjectType];
                 if (!config) return;
 
+                let placementMade = false;
+
                 if (selectedObjectType === 'tiled_floor') {
                     const index = floorObjects.findIndex(obj => obj.row === cell.row && obj.col === cell.col);
                     if (index === -1) {
                         floorObjects.push({
                             type: selectedObjectType, row: cell.row, col: cell.col, id: KNOWN_INTEGER_IDS[selectedObjectType], rotation: 0
                         });
+                        placementMade = true;
                     } else {
                         floorObjects.splice(index, 1);
+                        placementMade = true;
                     }
                 } else {
                     // Check special objects and floor objects for occupancy
@@ -946,17 +962,20 @@
                         specialObjects.push({
                             type: selectedObjectType, row: cell.row, col: cell.col, id: newId, rotation: ghostRotation 
                         });
+                        placementMade = true;
                     } else {
                         // Remove if already occupied (simple toggle)
                         specialObjects = specialObjects.filter(obj => 
                             !(obj.row === cell.row && obj.col === cell.col)
                         );
-                        // Note: Floor tiles are only removed if a feature is placed on top. 
-                        // To allow floor toggle in click mode, we must remove it here too.
-                        // However, let's keep it simple: Click mode places features or toggles floor only.
+                        placementMade = true;
                     }
                 }
-                drawGrid();
+
+                if (placementMade) {
+                    updateBlockCount(); // Update counter after placement/removal
+                    drawGrid();
+                }
             }
         }
 
@@ -1039,6 +1058,7 @@
                 panX = 0;
                 panY = 0;
                 drawGrid();
+                updateBlockCount(); // Update counter after loading
                 clonedArea = null; 
                 
                 let message = `Successfully loaded ${blocksLoaded} blocks.`;
@@ -1115,6 +1135,7 @@
             setMode(MODES.CLICK); 
             
             drawGrid();
+            updateBlockCount(); // Initial count on load
 
             // Setup Event Listeners
             window.addEventListener('resize', () => {
@@ -1191,6 +1212,17 @@
             <!-- Dropdown Menu and Controls (Top Right Panel) -->
             <div class="absolute top-0 right-0 p-3 bg-gray-700/50 rounded-lg shadow-xl backdrop-blur-sm flex flex-col items-stretch space-y-2 max-w-xs md:max-w-none">
                 
+                <!-- BLOCK COUNT DISPLAY (NEW) -->
+                <div class="p-2 bg-gray-600 rounded-md text-sm font-semibold text-center text-white border border-gray-500">
+                    Total Blocks: <span id="block-count" class="text-yellow-300">0</span>
+                </div>
+
+                <!-- ITEM SELECTION -->
+                <label for="item-select" class="text-xs text-gray-200 block mt-2">Place Feature:</label>
+                <select id="item-select" class="p-2 text-sm bg-gray-800 text-white border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-150" onchange="handleItemChange(event)">
+                    <!-- Options populated by JS -->
+                </select>
+                
                 <!-- MODE SELECTION BUTTONS -->
                 <div class="flex justify-between space-x-2 p-1 bg-gray-800 rounded-md">
                     <button id="mode-btn-click" class="mode-btn" title="Click Mode (Single Place/Toggle)">
@@ -1206,12 +1238,6 @@
                         🗑️
                     </button>
                 </div>
-
-                <!-- ITEM SELECTION -->
-                <label for="item-select" class="text-xs text-gray-200 block mt-2">Place Feature:</label>
-                <select id="item-select" class="p-2 text-sm bg-gray-800 text-white border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-150" onchange="handleItemChange(event)">
-                    <!-- Options populated by JS -->
-                </select>
 
                 <!-- CODE GENERATION BUTTON -->
                 <button id="generate-code-btn" class="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm rounded-md shadow-lg transition duration-200 transform hover:scale-[1.02]">
