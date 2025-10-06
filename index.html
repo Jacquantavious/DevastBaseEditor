@@ -173,6 +173,16 @@
         let helpModal;
 
         /**
+         * Checks if a given object type should be able to rotate visually.
+         */
+        function isDirectional(type) {
+             const config = OBJECT_CONFIGS[type];
+             if (!config) return false;
+             // 3x1 features, the Bag (oval), the Fridge (half-square), and the Metal Door (hinge detail)
+             return config.length > 1 || config.shapeType === 'oval' || type === 'fridge' || type === 'metal_door';
+        }
+
+        /**
          * Calculates the grid cell (row, col) from screen coordinates (x, y) after pan and zoom.
          */
         function getCellFromScreenCoords(screenX, screenY) {
@@ -202,36 +212,6 @@
         }
 
         /**
-         * Draws internal details for the Research object.
-         */
-        function drawResearchInternalDetail(cellSize, widthRatio) {
-            const redSize = cellSize * 0.4;
-            const drawHeight = cellSize * widthRatio;
-            const redX = -redSize / 2;
-            const featureTopHalfHeight = drawHeight / 2; 
-            const redCenterY = -featureTopHalfHeight / 2; 
-            const redY = redCenterY - redSize / 2; 
-
-            ctx.fillStyle = '#E32636'; 
-            ctx.fillRect(redX, redY, redSize, redSize);
-        }
-
-        /**
-         * Draws internal details for Smelter/Tesla.
-         */
-        function drawSmelterCenterSquare(cellSize, widthRatio) {
-            const squareSize = cellSize * 0.4;
-            const drawHeight = cellSize * widthRatio;
-            const blueX = -squareSize / 2;
-            const featureTopHalfHeight = drawHeight / 2; 
-            const blueCenterY = -featureTopHalfHeight / 2; 
-            const blueY = blueCenterY - squareSize / 2; 
-
-            ctx.fillStyle = '#1e90ff'; 
-            ctx.fillRect(blueX, blueY, squareSize, squareSize);
-        }
-
-        /**
          * Draws the cross detail for Tiled Floor.
          */
         function drawTiledFloorDetail(cellSize, isGhost) {
@@ -246,6 +226,7 @@
 
         /**
          * Draws a single feature (placed or ghost) onto the canvas.
+         * The coordinate system is translated to the center of the anchor cell.
          */
         function drawFeature(obj, originalCellSize, scale, isGhost = false) {
             const config = OBJECT_CONFIGS[obj.type];
@@ -261,50 +242,61 @@
             
             ctx.save();
             
-            const is3x1Feature = config.length > 1 && obj.type !== 'unknown';
-            const rotationOffset = is3x1Feature ? 90 : 0;
-            const rotationToApply = (obj.rotation + rotationOffset) % 360;
-            
-            ctx.translate(cellCenterX, cellCenterY);
-            // Apply rotation for features/ovals
-            if (is3x1Feature || config.shapeType === 'oval') {
+            // Check if this specific type needs rotation (3x1, Bag, Fridge, Door)
+            if (isDirectional(obj.type)) {
+                // 1. Translate to the center of the anchor cell (0, 0 in local space is the center)
+                ctx.translate(cellCenterX, cellCenterY);
+                // 2. Apply rotation based on the object's stored angle
                 ctx.rotate(obj.rotation * Math.PI / 180);
+            } else {
+                // For non-directional objects (e.g., circular workbench), just translate
+                ctx.translate(cellCenterX, cellCenterY);
             }
 
 
             const S = originalCellSize;
             const halfS = S / 2;
 
-            if (is3x1Feature) {
+            if (config.shapeType === 'rectangle') {
                 // --- 3x1 Feature Drawing (Rectangle) ---
-                const featureTotalLength = originalCellSize * config.length; 
-                const drawLength = featureTotalLength; 
-                const drawHeight = originalCellSize * config.widthRatio;
-                const featureDrawX = -drawLength / 2;
-                const featureDrawY = -drawHeight / 2;
                 
-                // Re-apply rotation for 3x1 visual offset
-                ctx.rotate(90 * Math.PI / 180); 
+                // Define the shape in its default (0 degree) vertical orientation: 
+                // long dimension along the Y-axis, short dimension along the X-axis.
+                const totalLengthPixels = S * config.length; // 3 cells worth of pixels
+                const totalWidthPixels = S * config.widthRatio; // e.g., 2/3 cell width
 
+                const drawXLength = totalWidthPixels; 
+                const drawYLength = totalLengthPixels; 
+
+                // Rectangle starts at (-half X-dim, -half Y-dim)
+                const featureDrawX = -drawXLength / 2; 
+                const featureDrawY = -drawYLength / 2; 
+                
                 ctx.fillStyle = config.color;
-                ctx.fillRect(featureDrawX, featureDrawY, drawLength, drawHeight);
+                ctx.fillRect(featureDrawX, featureDrawY, drawXLength, drawYLength);
 
                 ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
                 ctx.lineWidth = 2 / scale;
-                ctx.strokeRect(featureDrawX, featureDrawY, drawLength, drawHeight);
+                ctx.strokeRect(featureDrawX, featureDrawY, drawXLength, drawYLength);
 
+                // Internal Details (Research, Smelter, Tesla) are centered on the anchor cell (0, 0)
                 if (scale > 0.5) {
+                    const detailSize = S * 0.4;
+                    const detailHalf = detailSize / 2;
+                    
                     if (obj.type === 'research') {
-                        drawResearchInternalDetail(originalCellSize, config.widthRatio);
+                        ctx.fillStyle = '#E32636'; // Red
+                        ctx.fillRect(-detailHalf, -detailHalf, detailSize, detailSize);
                     } else if (obj.type === 'smelter' || obj.type === 'tesla') { 
-                        drawSmelterCenterSquare(originalCellSize, config.widthRatio); 
+                        ctx.fillStyle = '#1e90ff'; // Blue
+                        ctx.fillRect(-detailHalf, -detailHalf, detailSize, detailSize);
                     }
                 }
             } 
             // --- 1x1 Feature Drawing (Circles/Ovals/Squares) ---
             else { 
                 
-                // --- CIRCLE/OVAL SHAPES (New and Existing) ---
+                // --- CIRCLE/OVAL SHAPES ---
                 if (config.shapeType === 'circle' || config.shapeType === 'oval') {
                     
                     const radius = halfS * 0.9; 
@@ -313,7 +305,8 @@
                     
                     // Specific dimensions for Oval (Bag)
                     if (config.shapeType === 'oval') {
-                        radiusX = halfS * 0.8;
+                        // These dimensions are defined relative to the current local space (which is rotated if obj.rotation > 0)
+                        radiusX = halfS * 0.8; 
                         radiusY = halfS * 0.45;
                     }
                     
@@ -322,7 +315,7 @@
                     
                     if (config.shapeType === 'circle') {
                         ctx.arc(0, 0, radius, 0, 2 * Math.PI); 
-                    } else { // oval (rotation already applied by ctx.rotate above)
+                    } else { // oval
                          ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, 2 * Math.PI);
                     }
                     
@@ -342,13 +335,17 @@
                 }
                 
                 // --- FRIDGE (Half Block - Special Case) ---
-                else if (config.shapeType === 'half-square') {
+                else if (obj.type === 'fridge' && config.shapeType === 'half-square') {
+                    // Draw the shape starting from the center of the cell and extending to the 'left' half 
+                    // (which is defined relative to the rotated context)
                     ctx.fillStyle = config.color;
+                    // DrawfillRect(-halfS, -halfS, halfS, S) draws a box from X=-halfS to X=0.
+                    // This is the correct base shape which will be rotated by the context transform.
                     ctx.fillRect(-halfS, -halfS, halfS, S); 
 
                     ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
                     ctx.lineWidth = 2 / scale;
-                    ctx.strokeRect(-halfS, -halfS, S, S);
+                    ctx.strokeRect(-halfS, -halfS, S, S); // Stroke the full cell boundary
                 }
 
                 // --- TILED FLOOR ---
@@ -371,9 +368,11 @@
                     ctx.fillRect(-halfS, -halfS, S, S); 
 
                     if (obj.type === 'metal_door' && scale > 0.5) {
+                        // Draw red hinge detail.
+                        // Defined at the bottom-left corner of the cell (relative to the rotated context).
                         const detailSize = S * 0.3; 
-                        const detailX = -halfS; 
-                        const detailY = halfS - detailSize; 
+                        const detailX = -halfS; // Left edge
+                        const detailY = halfS - detailSize; // Bottom edge
                         ctx.fillStyle = '#E32636'; 
                         ctx.fillRect(detailX, detailY, detailSize, detailSize); 
                     }
@@ -513,11 +512,12 @@
                     });
                  } else if (currentMode !== MODES.DELETE) {
                     // Draw normal single ghost (only if not in DELETE mode)
+                    const rotation = isDirectional(selectedObjectType) ? ghostRotation : 0;
                     const ghostObject = {
                         type: selectedObjectType,
                         row: ghostRow,
                         col: ghostCol,
-                        rotation: selectedObjectType === 'tiled_floor' ? 0 : ghostRotation
+                        rotation: rotation
                     };
                     drawFeature(ghostObject, originalCellSize, scale, true);
                  }
@@ -587,6 +587,8 @@
 
             const isHorizontal = Math.abs(end.col - start.col) >= Math.abs(end.row - start.row);
             
+            const objRotation = isDirectional(objectType) ? rotation : 0;
+
             if (objectType === 'tiled_floor') {
                 for (let r = startY; r <= endY; r++) {
                     for (let c = startX; c <= endX; c++) {
@@ -607,7 +609,7 @@
                         const isOccupied = specialObjects.some(obj => obj.row === fixedRow && obj.col === c);
                         if (!isOccupied) {
                             specialObjects.push({ 
-                                type: objectType, row: fixedRow, col: c, id: KNOWN_INTEGER_IDS[objectType], rotation: rotation 
+                                type: objectType, row: fixedRow, col: c, id: KNOWN_INTEGER_IDS[objectType], rotation: objRotation 
                             });
                         }
                     }
@@ -617,7 +619,7 @@
                         const isOccupied = specialObjects.some(obj => obj.row === r && obj.col === fixedCol);
                          if (!isOccupied) {
                             specialObjects.push({ 
-                                type: objectType, row: r, col: fixedCol, id: KNOWN_INTEGER_IDS[objectType], rotation: rotation 
+                                type: objectType, row: r, col: fixedCol, id: KNOWN_INTEGER_IDS[objectType], rotation: objRotation 
                             });
                         }
                     }
@@ -896,9 +898,8 @@
                 
                 case 'r': 
                     event.preventDefault(); 
-                    const config = OBJECT_CONFIGS[selectedObjectType];
-                    // Only allow rotation on 3x1 features and the oval (Bag)
-                    if (config.length > 1 || config.shapeType === 'oval') {
+                    // Use the new comprehensive check for rotation
+                    if (isDirectional(selectedObjectType)) {
                         ghostRotation = (ghostRotation + 90) % 360; 
                         moved = true; 
                     }
@@ -939,6 +940,9 @@
                 if (!config) return;
 
                 let placementMade = false;
+                
+                // Determine rotation for placement
+                const objRotation = isDirectional(selectedObjectType) ? ghostRotation : 0;
 
                 if (selectedObjectType === 'tiled_floor') {
                     const index = floorObjects.findIndex(obj => obj.row === cell.row && obj.col === cell.col);
@@ -960,7 +964,7 @@
                         let newId = KNOWN_INTEGER_IDS[selectedObjectType] || 0; 
 
                         specialObjects.push({
-                            type: selectedObjectType, row: cell.row, col: cell.col, id: newId, rotation: ghostRotation 
+                            type: selectedObjectType, row: cell.row, col: cell.col, id: newId, rotation: objRotation 
                         });
                         placementMade = true;
                     } else {
@@ -988,7 +992,7 @@
                 const id = obj.id;
                 const x = obj.col; 
                 const y = obj.row; 
-                // Use the original rotation if it's an unknown block, otherwise use the mapped code
+                // Use the rotation code (0-3) or default to 0
                 const r = rotationToCode[obj.rotation] !== undefined ? rotationToCode[obj.rotation] : 0; 
                 return `!b=${id}:${x}:${y}:${r}`;
             }).join(''); 
@@ -1087,14 +1091,6 @@
         function handleItemChange(event) {
             selectedObjectType = event.target.value;
             
-            const config = OBJECT_CONFIGS[selectedObjectType];
-            const isRotatable = config.length > 1 || config.shapeType === 'oval';
-
-            if (!isRotatable) {
-                // Reset rotation for items that shouldn't rotate visually
-                ghostRotation = 0; 
-            }
-            
             // Clear clone data if selected item changes
             if (currentMode === MODES.CLONE) {
                 clonedArea = null;
@@ -1178,7 +1174,6 @@
 
             document.getElementById('mode-btn-click').addEventListener('click', () => setMode(MODES.CLICK));
             document.getElementById('mode-btn-line').addEventListener('click', () => setMode(MODES.LINE));
-            document.getElementById('mode-btn-delete').addEventListener('click', () => setMode(MODES.DELETE));
             document.getElementById('mode-btn-clone').addEventListener('click', () => {
                 if (currentMode === MODES.CLONE && clonedArea !== null) {
                     // If in clone placement mode, clicking clone button resets selection and stays in clone selection mode
@@ -1187,6 +1182,7 @@
                 }
                 setMode(MODES.CLONE);
             });
+            document.getElementById('mode-btn-delete').addEventListener('click', () => setMode(MODES.DELETE));
             
             // Initial modal display
             helpModalOverlay.classList.add('visible');
@@ -1294,7 +1290,7 @@
                 <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
                     <li>**Zoom**: Use the **Scroll Wheel** (or pinch on touch devices).</li>
                     <li>**Pan/Move**: Use **WASD** keys or **Middle Mouse Click & Drag**.</li>
-                    <li>**Rotate Ghost Preview**: Press **R** to rotate the object ghost before placing (only for applicable items like 3x1 features or the Bag oval).</li>
+                    <li>**Rotate Ghost Preview**: Press **R** to rotate the object ghost before placing (only for applicable items like 3x1 features, **Fridge**, **Door**, or **Bag**).</li>
                     <li>**Toggle Help**: Press **H** to show/hide this modal.</li>
                 </ul>
 
