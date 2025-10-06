@@ -99,12 +99,12 @@
         };
 
         // Configuration for different object types
-        // Added shapeType for simpler drawing logic separation
         const OBJECT_CONFIGS = {
             'research': { name: 'Research (3x1 Blue)', color: '#4C60F5', length: 3, widthRatio: 2/3, shapeType: 'rectangle' },
             'smelter': { name: 'Smelter (3x1 Red)', color: '#E32636', length: 3, widthRatio: 2/3, shapeType: 'rectangle' },
             'tesla': { name: 'Tesla (3x1 Green)', color: '#00AA00', length: 3, widthRatio: 2/3, shapeType: 'rectangle' },
-            'fridge': { name: 'Fridge (1x1 Half Gray)', color: '#A9A9A9', length: 1, widthRatio: 1, shapeType: 'half-square' },
+            // Adjusted color for Fridge for better visual contrast
+            'fridge': { name: 'Fridge (1x1 Half Gray)', color: '#C0C0C0', length: 1, widthRatio: 1, shapeType: 'half-square' }, 
             
             'workbench': { name: 'Workbench (1x1 Brown Circle)', color: '#A0522D', length: 1, widthRatio: 1, shapeType: 'circle' },
             'firepit': { name: 'Firepit (1x1 Yellow Circle)', color: '#FFD700', length: 1, widthRatio: 1, shapeType: 'circle' },
@@ -178,7 +178,7 @@
         function isDirectional(type) {
              const config = OBJECT_CONFIGS[type];
              if (!config) return false;
-             // 3x1 features, the Bag (oval), the Fridge (half-square), and the Metal Door (hinge detail)
+             // 3x1 features (length > 1), the Bag (oval), the Fridge (half-square), and the Metal Door (hinge detail)
              return config.length > 1 || config.shapeType === 'oval' || type === 'fridge' || type === 'metal_door';
         }
 
@@ -242,15 +242,12 @@
             
             ctx.save();
             
-            // Check if this specific type needs rotation (3x1, Bag, Fridge, Door)
+            // 1. Translate to the center of the anchor cell (0, 0 in local space is the center)
+            ctx.translate(cellCenterX, cellCenterY);
+
+            // 2. Apply rotation if directional
             if (isDirectional(obj.type)) {
-                // 1. Translate to the center of the anchor cell (0, 0 in local space is the center)
-                ctx.translate(cellCenterX, cellCenterY);
-                // 2. Apply rotation based on the object's stored angle
                 ctx.rotate(obj.rotation * Math.PI / 180);
-            } else {
-                // For non-directional objects (e.g., circular workbench), just translate
-                ctx.translate(cellCenterX, cellCenterY);
             }
 
 
@@ -260,15 +257,12 @@
             if (config.shapeType === 'rectangle') {
                 // --- 3x1 Feature Drawing (Rectangle) ---
                 
-                // Define the shape in its default (0 degree) vertical orientation: 
-                // long dimension along the Y-axis, short dimension along the X-axis.
-                const totalLengthPixels = S * config.length; // 3 cells worth of pixels
-                const totalWidthPixels = S * config.widthRatio; // e.g., 2/3 cell width
+                const totalLengthPixels = S * config.length; 
+                const totalWidthPixels = S * config.widthRatio; 
 
                 const drawXLength = totalWidthPixels; 
                 const drawYLength = totalLengthPixels; 
 
-                // Rectangle starts at (-half X-dim, -half Y-dim)
                 const featureDrawX = -drawXLength / 2; 
                 const featureDrawY = -drawYLength / 2; 
                 
@@ -279,7 +273,7 @@
                 ctx.lineWidth = 2 / scale;
                 ctx.strokeRect(featureDrawX, featureDrawY, drawXLength, drawYLength);
 
-                // Internal Details (Research, Smelter, Tesla) are centered on the anchor cell (0, 0)
+                // Internal Details 
                 if (scale > 0.5) {
                     const detailSize = S * 0.4;
                     const detailHalf = detailSize / 2;
@@ -305,7 +299,6 @@
                     
                     // Specific dimensions for Oval (Bag)
                     if (config.shapeType === 'oval') {
-                        // These dimensions are defined relative to the current local space (which is rotated if obj.rotation > 0)
                         radiusX = halfS * 0.8; 
                         radiusY = halfS * 0.45;
                     }
@@ -337,10 +330,8 @@
                 // --- FRIDGE (Half Block - Special Case) ---
                 else if (obj.type === 'fridge' && config.shapeType === 'half-square') {
                     // Draw the shape starting from the center of the cell and extending to the 'left' half 
-                    // (which is defined relative to the rotated context)
+                    // This area [-halfS, 0] along the local X-axis rotates with the context.
                     ctx.fillStyle = config.color;
-                    // DrawfillRect(-halfS, -halfS, halfS, S) draws a box from X=-halfS to X=0.
-                    // This is the correct base shape which will be rotated by the context transform.
                     ctx.fillRect(-halfS, -halfS, halfS, S); 
 
                     ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
@@ -373,7 +364,8 @@
                         const detailSize = S * 0.3; 
                         const detailX = -halfS; // Left edge
                         const detailY = halfS - detailSize; // Bottom edge
-                        ctx.fillStyle = '#E32636'; 
+                        // Used a brighter color to ensure rotation visibility
+                        ctx.fillStyle = '#FF4500'; 
                         ctx.fillRect(detailX, detailY, detailSize, detailSize); 
                     }
 
@@ -587,6 +579,7 @@
 
             const isHorizontal = Math.abs(end.col - start.col) >= Math.abs(end.row - start.row);
             
+            // This is the correct rotation for all directional objects
             const objRotation = isDirectional(objectType) ? rotation : 0;
 
             if (objectType === 'tiled_floor') {
@@ -707,6 +700,7 @@
                     row: targetRow,
                     col: targetCol,
                     id: item.id,
+                    // Use the rotation stored during selection
                     rotation: item.rotation 
                 };
 
@@ -816,6 +810,7 @@
             if (isDraggingForAction && cell && dragStartCell) {
                 // Finalize action for drag modes
                 if (currentMode === MODES.LINE) {
+                    // Pass the current ghostRotation
                     applyLinePlacement(dragStartCell, cell, selectedObjectType, ghostRotation);
                 } else if (currentMode === MODES.DELETE) {
                     applyLineDeletion(dragStartCell, cell);
@@ -898,7 +893,7 @@
                 
                 case 'r': 
                     event.preventDefault(); 
-                    // Use the new comprehensive check for rotation
+                    // Only allow rotation if the currently selected item is directional
                     if (isDirectional(selectedObjectType)) {
                         ghostRotation = (ghostRotation + 90) % 360; 
                         moved = true; 
@@ -918,6 +913,7 @@
         function handleCanvasClick(event) {
             if (helpModalOverlay.classList.contains('visible')) return;
 
+            // Prevent placement if it was part of a drag/pan action
             if (event.button !== 0 || isPanning || isDraggingForAction) {
                 isPanning = false; // Reset for next cycle
                 return;
@@ -941,7 +937,7 @@
 
                 let placementMade = false;
                 
-                // Determine rotation for placement
+                // Determine rotation for placement (uses the current ghost rotation)
                 const objRotation = isDirectional(selectedObjectType) ? ghostRotation : 0;
 
                 if (selectedObjectType === 'tiled_floor') {
@@ -957,7 +953,6 @@
                     }
                 } else {
                     // Check special objects and floor objects for occupancy
-                    // For simplicity in a 1x1 grid, we check if the cell is occupied by any special object.
                     const isOccupied = specialObjects.some(obj => obj.row === cell.row && obj.col === cell.col);
 
                     if (!isOccupied) {
@@ -1099,7 +1094,7 @@
             drawGrid();
         }
         
-        // --- Help Modal Logic (Kept from previous version) ---
+        // --- Help Modal Logic ---
 
         /**
          * Toggles the visibility of the help modal.
@@ -1275,7 +1270,7 @@
 
     </div>
 
-    <!-- Help/Controls Pop-up Modal (Kept the same) -->
+    <!-- Help/Controls Pop-up Modal -->
     <div id="helpModalOverlay" class="modal-overlay hidden">
         <div id="helpModal" class="modal-content bg-gray-800 text-white p-6 rounded-xl shadow-2xl w-full max-w-lg border-2 border-indigo-500">
             <div class="flex justify-between items-start mb-4">
