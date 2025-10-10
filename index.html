@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Devast Base Editor (H for Help)</title>
-    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom CSS for Game/App Styling */
@@ -168,9 +167,13 @@
         let dragCurrentCell = null;
         let clonedArea = null; 
         
+        // --- Layer View State (NEW) ---
+        let isFloorLayerVisible = false; 
+        
         // --- Modal Elements ---
         let helpModalOverlay;
         let helpModal;
+        let layerViewDisplay; // Element to update
 
         /**
          * Checks if a given object type should be able to rotate visually.
@@ -210,6 +213,18 @@
             const totalBlocks = specialObjects.length + floorObjects.length;
             document.getElementById('block-count').textContent = totalBlocks;
         }
+        
+        /**
+         * Updates the layer view display text.
+         */
+        function updateLayerViewDisplay() {
+            layerViewDisplay.textContent = isFloorLayerVisible ? 
+                'Floor Layer (Special Blocks Faint) - Press G' : 
+                'Full View (Normal) - Press G';
+            layerViewDisplay.classList.toggle('text-green-400', isFloorLayerVisible);
+            layerViewDisplay.classList.toggle('text-gray-400', !isFloorLayerVisible);
+        }
+
 
         /**
          * Draws the cross detail for Tiled Floor.
@@ -227,14 +242,21 @@
         /**
          * Draws a single feature (placed or ghost) onto the canvas.
          * The coordinate system is translated to the center of the anchor cell.
+         * @param {Object} obj The object to draw
+         * @param {number} originalCellSize The unscaled cell size
+         * @param {number} scale The current zoom scale
+         * @param {boolean} isGhost Whether the object is a ghost preview
+         * @param {number} [opacity=1.0] The opacity to draw the object with
          */
-        function drawFeature(obj, originalCellSize, scale, isGhost = false) {
+        function drawFeature(obj, originalCellSize, scale, isGhost = false, opacity = 1.0) {
             const config = OBJECT_CONFIGS[obj.type];
             if (!config) return;
             if (obj.row < 0 || obj.col < 0) return; 
 
             if (isGhost) {
                 ctx.globalAlpha = 0.33; 
+            } else {
+                ctx.globalAlpha = opacity;
             }
 
             const cellCenterX = obj.col * originalCellSize + originalCellSize / 2;
@@ -382,9 +404,8 @@
             
             ctx.restore();
             
-            if (isGhost) {
-                ctx.globalAlpha = 1.0;
-            }
+            // Reset global alpha after drawing the feature
+            ctx.globalAlpha = 1.0; 
         }
 
 
@@ -447,6 +468,10 @@
          */
         function drawGrid() {
             if (!ctx) return;
+            
+            // Determine the opacity for special objects
+            const specialObjectOpacity = isFloorLayerVisible ? 0.15 : 1.0;
+            updateLayerViewDisplay(); // Update the UI text
 
             // 1. Clear the canvas and fill the background
             ctx.fillStyle = BACKGROUND_COLOR;
@@ -470,12 +495,14 @@
                 ctx.beginPath(); ctx.moveTo(0, position); ctx.lineTo(baseSize, position); ctx.stroke();
             }
 
-            // 3. Draw Floor Objects
+            // 3. Draw Floor Objects (always full opacity)
             floorObjects.forEach(obj => {
-                drawFeature(obj, originalCellSize, scale, false);
+                drawFeature(obj, originalCellSize, scale, false, 1.0);
             });
             
             // 4. Draw Ghost Previews (Action or Single Placement)
+            // Ghost previews should not use the layer opacity, they should be a constant transparency (0.33)
+            // The isGhost flag in drawFeature handles this, which overrides the opacity parameter.
 
             // A. Drag Action Preview (Line, Delete, Clone Selection)
             if (isDraggingForAction && dragStartCell && dragCurrentCell) {
@@ -495,12 +522,13 @@
                     clonedArea.data.forEach(item => {
                         const targetRow = ghostRow + item.offsetY;
                         const targetCol = ghostCol + item.offsetX;
+                        // Use isGhost = true for the placement preview
                         drawFeature({ 
                             type: item.type, 
                             row: targetRow, 
                             col: targetCol, 
                             rotation: item.rotation 
-                        }, originalCellSize, scale, true);
+                        }, originalCellSize, scale, true); 
                     });
                  } else if (currentMode !== MODES.DELETE) {
                     // Draw normal single ghost (only if not in DELETE mode)
@@ -511,14 +539,14 @@
                         col: ghostCol,
                         rotation: rotation
                     };
-                    drawFeature(ghostObject, originalCellSize, scale, true);
+                    drawFeature(ghostObject, originalCellSize, scale, true); // Use isGhost = true
                  }
             }
 
 
-            // 5. Draw Placed Special Objects
+            // 5. Draw Placed Special Objects (with layer-controlled opacity)
             specialObjects.forEach(obj => {
-                drawFeature(obj, originalCellSize, scale, false);
+                drawFeature(obj, originalCellSize, scale, false, specialObjectOpacity);
             });
 
             ctx.restore();
@@ -903,6 +931,11 @@
                     event.preventDefault();
                     toggleHelpModal();
                     break;
+                case 'g': // Toggle Floor Layer View (NEW)
+                    event.preventDefault();
+                    isFloorLayerVisible = !isFloorLayerVisible;
+                    moved = true;
+                    break;
             }
 
             if (moved) {
@@ -1118,6 +1151,7 @@
             ctx = canvas.getContext('2d');
             helpModalOverlay = document.getElementById('helpModalOverlay');
             helpModal = document.getElementById('helpModal');
+            layerViewDisplay = document.getElementById('current-layer-view'); // Get the new element
 
 
             updateBaseSize();
@@ -1191,30 +1225,27 @@
 <body class="flex flex-col items-center justify-start h-screen">
 
     <div class="app-container">
-        <!-- Header and Information -->
         <div class="text-white text-center mb-4 mt-4 relative w-full max-w-7xl">
             <h1 id="main-title" class="text-3xl font-bold text-white mb-2 shadow-lg p-2 rounded-lg bg-indigo-700/50">
                 Devast Base Editor
             </h1>
-            <p class="text-sm text-gray-400">
+            <p class="text-sm text-gray-400 mb-1">
                 Current Mode: <span id="current-mode-display" class="font-semibold text-yellow-400">Click (Single Place/Toggle)</span>. Press **H** for help/controls.
             </p>
+             <p class="text-sm text-gray-400">
+                Layer View: <span id="current-layer-view" class="font-semibold">Full View (Normal) - Press G</span>
+            </p>
             
-            <!-- Dropdown Menu and Controls (Top Right Panel) -->
             <div class="absolute top-0 right-0 p-3 bg-gray-700/50 rounded-lg shadow-xl backdrop-blur-sm flex flex-col items-stretch space-y-2 max-w-xs md:max-w-none">
                 
-                <!-- BLOCK COUNT DISPLAY (NEW) -->
                 <div class="p-2 bg-gray-600 rounded-md text-sm font-semibold text-center text-white border border-gray-500">
                     Total Blocks: <span id="block-count" class="text-yellow-300">0</span>
                 </div>
 
-                <!-- ITEM SELECTION -->
                 <label for="item-select" class="text-xs text-gray-200 block mt-2">Place Feature:</label>
                 <select id="item-select" class="p-2 text-sm bg-gray-800 text-white border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-150" onchange="handleItemChange(event)">
-                    <!-- Options populated by JS -->
-                </select>
+                    </select>
                 
-                <!-- MODE SELECTION BUTTONS -->
                 <div class="flex justify-between space-x-2 p-1 bg-gray-800 rounded-md">
                     <button id="mode-btn-click" class="mode-btn" title="Click Mode (Single Place/Toggle)">
                         🖱️
@@ -1230,7 +1261,6 @@
                     </button>
                 </div>
 
-                <!-- CODE GENERATION BUTTON -->
                 <button id="generate-code-btn" class="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm rounded-md shadow-lg transition duration-200 transform hover:scale-[1.02]">
                     Generate Map Code
                 </button>
@@ -1238,18 +1268,15 @@
             </div>
         </div>
 
-        <!-- Canvas Container -->
         <div class="flex flex-grow items-center justify-center w-full max-w-full rounded-xl mb-4">
             <canvas id="gridCanvas"></canvas>
         </div>
 
 
-        <!-- Code Output & Input Section -->
         <div id="code-output-container" class="w-full max-w-4xl p-4 bg-gray-800 rounded-lg shadow-2xl mb-8">
             
             <h2 class="text-xl font-bold text-gray-100 mb-3">Map Code Interface</h2>
             
-            <!-- Input Area for Loading (New) -->
             <div class="mb-4">
                 <label for="map-code-input" class="text-gray-300 text-sm mb-1 block">Paste Map Code to Load Blocks:</label>
                 <textarea id="map-code-input" rows="3" class="w-full p-3 bg-gray-900 text-yellow-300 border border-gray-700 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Paste your !b=ID:X:Y:R code string here..."></textarea>
@@ -1260,7 +1287,6 @@
             
             <hr class="border-gray-700 mb-4">
 
-            <!-- Output Area for Exporting -->
             <label for="map-code-output" class="text-gray-300 text-sm mb-1 block">Generated Map Code (Export):</label>
             <textarea id="map-code-output" rows="5" class="w-full p-3 bg-gray-900 text-green-300 border border-gray-700 rounded-md"></textarea>
             <button id="copy-code-btn" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition duration-150">
@@ -1270,7 +1296,6 @@
 
     </div>
 
-    <!-- Help/Controls Pop-up Modal -->
     <div id="helpModalOverlay" class="modal-overlay hidden">
         <div id="helpModal" class="modal-content bg-gray-800 text-white p-6 rounded-xl shadow-2xl w-full max-w-lg border-2 border-indigo-500">
             <div class="flex justify-between items-start mb-4">
@@ -1286,6 +1311,7 @@
                     <li>**Zoom**: Use the **Scroll Wheel** (or pinch on touch devices).</li>
                     <li>**Pan/Move**: Use **WASD** keys or **Middle Mouse Click & Drag**.</li>
                     <li>**Rotate Ghost Preview**: Press **R** to rotate the object ghost before placing (only for applicable items like 3x1 features, **Fridge**, **Door**, or **Bag**).</li>
+                    <li>**Toggle Floor View**: Press **G** to switch between **Full View** and **Floor Layer** (Special objects are almost transparent).</li>
                     <li>**Toggle Help**: Press **H** to show/hide this modal.</li>
                 </ul>
 
