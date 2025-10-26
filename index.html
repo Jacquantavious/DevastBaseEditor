@@ -72,17 +72,6 @@
     <header class="w-full bg-[#2a2a2a] p-3 shadow-lg fixed top-0 z-10">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <h1 class="text-2xl font-bold text-indigo-400">Base Grid Editor</h1>
-            
-            <!-- LLM Feature Buttons -->
-            <div class="flex space-x-3">
-                <button id="analyzeButton" onclick="callGeminiAnalysis()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-1 px-3 rounded-lg shadow-md transition duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
-                    Analyze Base Layout ✨
-                </button>
-                <button id="describeButton" onclick="callGeminiDescription()" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-1 px-3 rounded-lg shadow-md transition duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
-                    Describe Item ✨
-                </button>
-            </div>
-            
             <div id="coordinateDisplay" class="text-sm text-gray-400 font-mono tracking-wider bg-[#1a1a1a] px-3 py-1 rounded-full shadow-inner">
                 X: 0, Y: 0 | Selected: Stone Wall
             </div>
@@ -109,7 +98,7 @@
         </div>
     </div>
 
-    <!-- Help Modal -->
+    <!-- Modal Background -->
     <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-20 items-center justify-center">
         <div class="bg-[#2a2a2a] p-8 rounded-xl shadow-2xl max-w-lg w-full transform scale-100 transition-transform duration-300">
             <h2 class="text-3xl font-bold text-indigo-400 mb-4 border-b border-gray-700 pb-2">Editor Help & Controls</h2>
@@ -137,24 +126,6 @@
         </div>
     </div>
 
-    <!-- LLM Analysis Modal -->
-    <div id="analysisModal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-20 items-center justify-center">
-        <div class="bg-[#2a2a2a] p-8 rounded-xl shadow-2xl max-w-xl w-full transform scale-100 transition-transform duration-300">
-            <div class="flex justify-between items-start border-b border-gray-700 pb-2 mb-4">
-                <h2 class="text-3xl font-bold text-emerald-400">Tactical Analysis Results</h2>
-                <button onclick="document.getElementById('analysisModal').classList.add('hidden')" class="text-gray-400 hover:text-white">&times;</button>
-            </div>
-            <div id="analysisContent" class="max-h-96 overflow-y-auto text-sm">
-                <!-- Content will be inserted here -->
-            </div>
-            <div class="mt-4 text-center">
-                <button onclick="document.getElementById('analysisModal').classList.add('hidden')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150">
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script type="module">
         // Global variables for Firebase access (required for state persistence)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -168,7 +139,7 @@
         
         // --- Firebase Setup ---
         let db, auth, userId = null;
-        let listenerAttached = false; 
+        let isAuthReady = false;
         
         // Uncomment to enable Firestore debug logs
         // setLogLevel('Debug');
@@ -177,69 +148,39 @@
             const app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
-            
-            // Authentication State Change Listener
+
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
-                    // User is authenticated (by custom token or anonymous sign-in)
                     userId = user.uid;
-                    
-                    // Start listening for data only if the listener is not yet attached
-                    if (db && !listenerAttached) {
-                        listenerAttached = true; // Mark as attached immediately
-                        setupFirestoreListener();
-                    }
                 } else {
-                    // User is null (unauthenticated state), try to sign in using the provided token first
-                    if (initialAuthToken) {
-                         try {
-                            await signInWithCustomToken(auth, initialAuthToken);
-                            // Success will trigger onAuthStateChanged again with the new user object
-                        } catch (error) {
-                            console.error("Custom token sign-in failed, trying anonymous sign-in:", error);
-                             try {
-                                // If custom token fails, fall back to anonymous sign-in
-                                await signInAnonymously(auth);
-                            } catch (error) {
-                                console.error("Error signing in anonymously:", error);
-                                // If all auth fails, set fallback ID and force listener setup (though it will likely still fail on rules)
-                                if (!listenerAttached) {
-                                    userId = crypto.randomUUID(); 
-                                    listenerAttached = true;
-                                    console.warn("Authentication failed, proceeding with mock user ID. Data persistence will likely fail due to security rules.");
-                                    setupFirestoreListener();
-                                }
-                            }
-                        }
-                    } else if (db && !listenerAttached) {
-                        // If no custom token exists, attempt anonymous sign-in
-                        try {
-                            await signInAnonymously(auth);
-                        } catch (error) {
-                            console.error("Error signing in anonymously:", error);
-                             if (!listenerAttached) {
-                                userId = crypto.randomUUID(); 
-                                listenerAttached = true;
-                                console.warn("Authentication failed, proceeding with mock user ID. Data persistence will likely fail due to security rules.");
-                                setupFirestoreListener();
-                            }
-                        }
+                    try {
+                        // Sign in anonymously if no user is present (should only happen if token is missing)
+                        await signInAnonymously(auth);
+                        userId = auth.currentUser.uid;
+                    } catch (error) {
+                        console.error("Error signing in anonymously:", error);
+                        // Fallback to random ID if anonymous sign-in fails
+                        userId = crypto.randomUUID(); 
                     }
                 }
+                isAuthReady = true;
+                // Once authenticated, start listening for data
+                if (db) setupFirestoreListener();
             });
 
-            // Initial sign-in attempt if we have a token (to kick off the onAuthStateChanged)
+            // Initial custom token sign-in if available
             if (initialAuthToken) {
-                // signInWithCustomToken is now handled inside onAuthStateChanged's 'else' block
-                // but we should ensure an initial state is set up if the token exists.
-                // We'll trust the onAuthStateChanged to manage the flow robustly.
+                signInWithCustomToken(auth, initialAuthToken).catch(error => {
+                    console.error("Custom token sign-in failed:", error);
+                });
+            } else if (!auth.currentUser) {
+                // If no token and no current user, let onAuthStateChanged handle anonymous sign-in
             }
-
 
         } else {
             console.error("Firebase config is missing. Data persistence is disabled.");
             userId = 'local-user'; // Use a mock ID for local development
-            listenerAttached = true;
+            isAuthReady = true;
         }
 
         // --- Grid and Canvas Setup ---
@@ -303,7 +244,7 @@
         // NEW: Drawing function for half-height walls
         function drawHalfWall(ctx, x, y, size, rotation, isGhost = false, color) {
             const halfHeight = size * 0.5;
-            const startY = y + (size - halfHeight); // Start drawing from the bottom half
+            const startY = y + (size - halfHeight); // Start drawing from the middle down
 
             const fill = isGhost ? `rgba(${hexToRgb(color)}, 0.4)` : color;
             ctx.fillStyle = fill;
@@ -442,7 +383,6 @@
                 if (drawY >= 0 && drawY <= canvas.height) {
                     ctx.beginPath();
                     ctx.moveTo(0, drawY);
-                    ctx.lineTo(0, drawY);
                     ctx.lineTo(canvas.width, drawY);
                     ctx.stroke();
                 }
@@ -773,6 +713,7 @@
                     offsetY = Math.max(0, Math.min(GRID_SIZE - canvas.height / effectiveTileSize, offsetY));
                     
                     lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
                 }
                 
                 updateSelectionDisplay();
@@ -957,205 +898,6 @@
                 document.getElementById('helpModal').classList.toggle('hidden');
             };
         };
-
-        // --- Gemini API Logic ---
-
-        function serializeGridData() {
-            if (Object.keys(gridData).length === 0) {
-                return "The grid is currently empty. The user needs a description of a base design they are planning. Treat this as a blank slate and provide general, initial advice.";
-            }
-
-            // Map item IDs to their names
-            const itemMap = items.reduce((acc, item) => {
-                acc[item.id] = item.name;
-                return acc;
-            }, {});
-
-            const baseSummary = {
-                wallCount: 0,
-                defenseCount: 0,
-                storageCount: 0,
-                layout: {} // { itemName: [coords] }
-            };
-
-            for (const key in gridData) {
-                const [x, y] = key.split(',').map(Number);
-                const obj = gridData[key];
-                const name = itemMap[obj.id] || `Unknown Item ID ${obj.id}`;
-
-                if (!baseSummary.layout[name]) {
-                    baseSummary.layout[name] = [];
-                }
-                // Only log coordinates for the first 10 placements of an item type to keep the prompt short
-                if (baseSummary.layout[name].length < 10) {
-                    baseSummary.layout[name].push(`(${x},${y})`);
-                }
-
-                // Count categories (ID ranges)
-                if (obj.id >= 1 && obj.id <= 9 || obj.id === 70) {
-                    baseSummary.wallCount++;
-                } else if (obj.id >= 20) {
-                    baseSummary.defenseCount++;
-                } else if (obj.id >= 12 && obj.id <= 19) {
-                    baseSummary.storageCount++;
-                }
-            }
-
-            let prompt = "Base Layout Map Summary:\n";
-            prompt += `Total unique blocks placed: ${Object.keys(gridData).length}\n`;
-            prompt += `Total walls (including low walls): ${baseSummary.wallCount}\n`;
-            prompt += `Total defenses (Spikes, Tesla Coil): ${baseSummary.defenseCount}\n`;
-            prompt += `Total storage/utilities (Fridge, Chests, Workbench): ${baseSummary.storageCount}\n\n`;
-            
-            prompt += "Specific Placement Details (first 10 coordinates listed per item type for context):\n";
-            
-            // Sort items for readability
-            const sortedItemNames = Object.keys(baseSummary.layout).sort();
-            
-            sortedItemNames.forEach(name => {
-                const count = baseSummary.layout[name].length;
-                prompt += `- ${name} (Total: ${count} tiles). Coords: ${baseSummary.layout[name].join(', ')}${count > 10 ? '...' : ''}\n`;
-            });
-            
-            prompt += `\n--- End of Grid Data. Focus your analysis on the placement and ratio of these items. ---\n`;
-            
-            return prompt;
-        }
-
-        window.callGeminiAnalysis = async function() {
-            const analysisModal = document.getElementById('analysisModal');
-            const analysisContent = document.getElementById('analysisContent');
-            const analyzeButton = document.getElementById('analyzeButton');
-            const describeButton = document.getElementById('describeButton');
-            
-            analyzeButton.disabled = true;
-            describeButton.disabled = true;
-
-            analysisContent.innerHTML = '<div class="text-center py-8"><svg class="animate-spin h-8 w-8 text-emerald-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><p class="mt-2 text-emerald-300">Analyzing base structure...</p></div>';
-            analysisModal.classList.remove('hidden');
-
-            const serializedData = serializeGridData();
-            const apiKey = ""; 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-            
-            const systemPrompt = "You are a highly experienced survival game base planning strategist. Your task is to analyze the provided base layout and give constructive, strategic feedback. Focus on defense (wall placement, trap usage), resource management (storage accessibility), and overall efficiency. Keep the analysis friendly, encouraging, and structured into 3 distinct, concise points (Defense, Utility, Efficiency).";
-            
-            const userQuery = `Analyze the following base structure data from the user's grid editor. Provide a detailed critique and specific suggestions based on its strengths and weaknesses. The grid is 149x149. The coordinates are (X, Y). \n\n${serializedData}`;
-
-            const payload = {
-                contents: [{ parts: [{ text: userQuery }] }],
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                },
-            };
-
-            let responseText = "Sorry, the tactical analysis server is currently offline. Please try fortifying your base later.";
-            let delay = 1000; // 1 second initial delay
-            const maxRetries = 3;
-
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    const result = await response.json();
-                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-                    if (text) {
-                        responseText = text;
-                        break; // Success! Exit loop
-                    }
-                } catch (e) {
-                    // Log error but continue to retry
-                    console.error(`Gemini API call failed, retrying in ${delay/1000}s...`, e);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2; // Exponential backoff
-                }
-            }
-
-            // Convert Markdown response to HTML for display
-            const htmlContent = responseText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                        .replace(/\n\n/g, '<br><br>')
-                                        .replace(/\n/g, '<br>');
-                                           
-            analysisContent.innerHTML = `<p class="text-gray-200">${htmlContent}</p>`;
-            analyzeButton.disabled = false;
-            describeButton.disabled = false;
-        }
-
-        window.callGeminiDescription = async function() {
-            const analysisModal = document.getElementById('analysisModal');
-            const analysisContent = document.getElementById('analysisContent');
-            const analyzeButton = document.getElementById('analyzeButton');
-            const describeButton = document.getElementById('describeButton');
-            
-            const item = getCurrentItem();
-            if (!item) {
-                analysisContent.innerHTML = '<p class="text-red-400">Please select an item first from the sidebar!</p>';
-                analysisModal.classList.remove('hidden');
-                return;
-            }
-
-            analyzeButton.disabled = true;
-            describeButton.disabled = true;
-
-            analysisContent.innerHTML = '<div class="text-center py-8"><svg class="animate-spin h-8 w-8 text-purple-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><p class="mt-2 text-purple-300">Creating item description for ' + item.name + '...</p></div>';
-            analysisModal.classList.remove('hidden');
-
-            const apiKey = ""; 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-            
-            const systemPrompt = "You are a creative writer for a post-apocalyptic survival game called Devast. Write a short, exciting, and thematic description for the item the user provides. Include its key features and a bit of lore or strategic advice. Keep it to one short, engaging paragraph.";
-            
-            const itemDetails = `Item Name: ${item.name}. ID: ${item.id}. Structure: ${item.structure ? 'Wall/Structure' : 'Utility/Trap'}. Rotatable: ${item.rotate ? 'Yes' : 'No'}. Color: ${item.color}.`;
-            const userQuery = `Write a description for the following game item:\n\n${itemDetails}`;
-
-            const payload = {
-                contents: [{ parts: [{ text: userQuery }] }],
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                },
-            };
-
-            let responseText = "Sorry, I couldn't generate a description for this item right now.";
-            let delay = 1000;
-            const maxRetries = 3;
-
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    const result = await response.json();
-                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-                    if (text) {
-                        responseText = text;
-                        break;
-                    }
-                } catch (e) {
-                    console.error(`Gemini API call failed, retrying in ${delay/1000}s...`, e);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2;
-                }
-            }
-
-            // Convert Markdown response to HTML for display
-            const htmlContent = responseText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                        .replace(/\n\n/g, '<br><br>')
-                                        .replace(/\n/g, '<br>');
-                                           
-            analysisContent.innerHTML = `<p class="text-gray-200">${htmlContent}</p>`;
-            analyzeButton.disabled = false;
-            describeButton.disabled = false;
-        }
-
 
         // --- Firestore Data Operations ---
 
