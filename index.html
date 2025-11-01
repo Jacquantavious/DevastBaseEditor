@@ -102,7 +102,7 @@
             'research': { name: 'Research (3x1 Blue)', color: '#4C60F5', length: 3, widthRatio: 2/3, shapeType: 'rectangle', image: './assets/day-workbench2.png' },
             'smelter': { name: 'Smelter (3x1 Red)', color: '#E32636', length: 3, widthRatio: 2/3, shapeType: 'rectangle', image: './assets/smelter.png' },
             'tesla': { name: 'Tesla (3x1 Green)', color: '#00AA00', length: 3, widthRatio: 2/3, shapeType: 'rectangle', image: './assets/tesla.png' },
-            // Adjusted color for Fridge for better visual contrast
+            // Fridge color is #C0C0C0
             'fridge': { name: 'Fridge (1x1 Half Gray)', color: '#C0C0C0', length: 1, widthRatio: 1, shapeType: 'half-square', image: './assets/fridge.png' },
             'workbench': { name: 'Workbench (1x1 Brown Circle)', color: '#A0522D', length: 1, widthRatio: 1, shapeType: 'circle', image: './assets/day-workbench.png' },
             'firepit': { name: 'Firepit (1x1 Yellow Circle)', color: '#FFD700', length: 1, widthRatio: 1, shapeType: 'circle', image: './assets/firepit.png' },
@@ -113,6 +113,8 @@
             'metal_wall': { name: 'Metal Wall (1x1 White)', color: '#FFFFFF', length: 1, widthRatio: 1, shapeType: 'square', image: './assets/metal_wall.png' },
             'metal_door': { name: 'Metal Door (1x1 Gray, Red Hinge)', color: '#808080', length: 1, widthRatio: 1, shapeType: 'square', image: './assets/metal_door.png' },
             'tiled_floor': { name: 'Tiled Floor (1x1 White Plus)', color: '#505050', length: 1, widthRatio: 1, shapeType: 'square', image: './assets/tiled_floor.png' },
+            // NEW BLOCK: METAL LOW WALL
+            'metal_low_wall': { name: 'Metal Low Wall (1x1 Half Gray)', color: '#B0B0B0', length: 1, widthRatio: 1, shapeType: 'half-square', image: './assets/low_wall.png' },
             'unknown': { name: 'Unknown Block', color: '#000000', length: 1, widthRatio: 1, shapeType: 'square', image: null }
         };
 
@@ -125,7 +127,9 @@
             // NEW BLOCK IDS
             'feeder': 160,
             'weaving': 57,
-            'bag': 64
+            'bag': 64,
+            // NEW BLOCK ID: METAL LOW WALL
+            'metal_low_wall': 70
         };
 
         // Reverse map for loading: ID -> type name (for easy lookup from code string)
@@ -207,8 +211,8 @@
         function isDirectional(type) {
             const config = OBJECT_CONFIGS[type];
             if (!config) return false;
-            // 3x1 features (length > 1), the Bag (oval), the Fridge (half-square), and the Metal Door (hinge detail)
-            return config.length > 1 || config.shapeType === 'oval' || type === 'fridge' || type === 'metal_door';
+            // 3x1 features (length > 1), the Bag (oval), the Half-Square items (Fridge, Low Wall), and the Metal Door (hinge detail)
+            return config.length > 1 || config.shapeType === 'oval' || config.shapeType === 'half-square' || type === 'metal_door';
         }
 
         /**
@@ -373,8 +377,8 @@
                         ctx.stroke();
                     }
 
-                    // --- FRIDGE (Half Block - Special Case) ---
-                    else if (obj.type === 'fridge' && config.shapeType === 'half-square') {
+                    // --- HALF SQUARE BLOCKS (e.g., Fridge, Metal Low Wall) ---
+                    else if (config.shapeType === 'half-square') {
                         // Draw the shape starting from the center of the cell and extending to the 'left' half
                         // This area [-halfS, 0] along the local X-axis rotates with the context.
                         ctx.fillStyle = config.color;
@@ -1008,4 +1012,321 @@
                         placementMade = true;
                     } else {
                         // Remove if already occupied (simple toggle)
-                        specialObjects
+                        specialObjects = specialObjects.filter(obj =>
+                            !(obj.row === cell.row && obj.col === cell.col)
+                        );
+                        placementMade = true;
+                    }
+                }
+
+                if (placementMade) {
+                    updateBlockCount(); // Update counter after placement/removal
+                    drawGrid();
+                }
+            }
+        }
+
+        function generateMapCode() {
+            const rotationToCode = { 0: 0, 90: 1, 180: 2, 270: 3 };
+
+            // Ensure unknown IDs are also exported correctly
+            const allObjects = [...floorObjects, ...specialObjects];
+
+            const codeString = allObjects.map(obj => {
+                const id = obj.id;
+                const x = obj.col;
+                const y = obj.row;
+                // Use the rotation code (0-3) or default to 0
+                const r = rotationToCode[obj.rotation] !== undefined ? rotationToCode[obj.rotation] : 0;
+
+                return `!b=${id}:${x}:${y}:${r}`;
+            }).join('');
+
+            document.getElementById('map-code-output').value = codeString;
+            document.getElementById('code-output-container').classList.remove('hidden');
+            document.getElementById('code-output-container').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        /**
+         * Parses the map code string and updates the global map arrays.
+         */
+        function loadMapFromCode() {
+            const code = document.getElementById('map-code-input').value;
+
+            // Clear existing objects
+            specialObjects = [];
+            floorObjects = [];
+
+            // Regex to find all block definitions: !b=ID:X:Y:R
+            const blockRegex = /!b=(\d+):(\d+):(\d+):(\d+)/g;
+            let match;
+            let blocksLoaded = 0;
+            let unknownBlocksCount = 0;
+
+            const rotationCodeToDegrees = { 0: 0, 1: 90, 2: 180, 3: 270 };
+
+            while ((match = blockRegex.exec(code)) !== null) {
+                const id = parseInt(match[1]);
+                const col = parseInt(match[2]);
+                const row = parseInt(match[3]);
+                const rotationCode = parseInt(match[4]);
+
+                // Skip if outside grid bounds
+                if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) continue;
+
+                let objectType = ID_TO_TYPE[id];
+                let rotation = rotationCodeToDegrees[rotationCode] || 0;
+
+                // Handle Unknown ID
+                if (!objectType) {
+                    objectType = 'unknown';
+                    unknownBlocksCount++;
+                }
+
+                const newObject = {
+                    type: objectType,
+                    row: row,
+                    col: col,
+                    id: id,
+                    rotation: rotation
+                };
+
+                // Decide if it's a floor tile or a special feature
+                if (newObject.type === 'tiled_floor') {
+                    floorObjects.push(newObject);
+                } else {
+                    specialObjects.push(newObject);
+                }
+
+                blocksLoaded++;
+            }
+
+            if (blocksLoaded > 0) {
+                // Reset pan and zoom to show the overall map better
+                scale = 1.0;
+                panX = 0;
+                panY = 0;
+
+                drawGrid();
+                updateBlockCount(); // Update counter after loading
+                clonedArea = null;
+
+                let message = `Successfully loaded ${blocksLoaded} blocks.`;
+                if (unknownBlocksCount > 0) {
+                    message += ` Found **${unknownBlocksCount} unknown block IDs** which are displayed as solid black squares.`;
+                }
+                console.log(message);
+            } else {
+                console.warn('No valid blocks found in the pasted code.');
+            }
+        }
+
+        function copyCode() {
+            const output = document.getElementById('map-code-output');
+            output.select();
+            output.setSelectionRange(0, 99999);
+            try {
+                // Use document.execCommand('copy') for better compatibility in iFrames
+                document.execCommand('copy');
+            } catch (err) {
+                console.error('Failed to copy code', err);
+            }
+        }
+
+        function handleItemChange(event) {
+            selectedObjectType = event.target.value;
+            // Clear clone data if selected item changes
+            if (currentMode === MODES.CLONE) {
+                clonedArea = null;
+                setMode(MODES.CLONE); // Re-set mode to update display text to "Selection"
+            }
+            drawGrid();
+        }
+
+        // --- Help Modal Logic ---
+
+        /**
+         * Toggles the visibility of the help modal.
+         */
+        window.toggleHelpModal = () => {
+            const isVisible = helpModalOverlay.classList.toggle('visible');
+
+            if (!isVisible) {
+                // When hiding, set the overlay to hidden after the transition completes
+                setTimeout(() => {
+                    helpModalOverlay.classList.add('hidden');
+                }, 300);
+            } else {
+                // When showing, remove hidden class immediately
+                helpModalOverlay.classList.remove('hidden');
+            }
+        };
+
+        function init() {
+            canvas = document.getElementById('gridCanvas');
+            ctx = canvas.getContext('2d');
+            helpModalOverlay = document.getElementById('helpModalOverlay');
+            helpModal = document.getElementById('helpModal');
+
+            updateBaseSize();
+
+            // Initialize mode to CLICK
+            setMode(MODES.CLICK);
+
+            // --- WAIT FOR IMAGES TO LOAD BEFORE FIRST DRAW ---
+            loadImages().then(() => {
+                drawGrid();
+                updateBlockCount(); // Initial count on load
+            });
+
+            // Setup Event Listeners
+            window.addEventListener('resize', () => {
+                updateBaseSize();
+                drawGrid();
+            });
+
+            // Re-adding all core map editor listeners
+            canvas.addEventListener('wheel', handleWheel);
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('mouseleave', () => {
+                handleMouseUp(null); // Pass null event to indicate mouseleave
+                ghostRow = -1;
+                ghostCol = -1;
+                drawGrid();
+            });
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('click', handleCanvasClick);
+            document.addEventListener('keydown', handleKeyDown);
+
+            // Initialize buttons and dropdown
+            document.getElementById('generate-code-btn').addEventListener('click', generateMapCode);
+            document.getElementById('copy-code-btn').addEventListener('click', copyCode);
+            document.getElementById('load-map-btn').addEventListener('click', loadMapFromCode);
+
+            const select = document.getElementById('item-select');
+            select.innerHTML = '';
+
+            for (const key in OBJECT_CONFIGS) {
+                // Exclude the 'unknown' block from the manual selection dropdown
+                if (key !== 'unknown') {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = OBJECT_CONFIGS[key].name;
+                    select.appendChild(option);
+                }
+            }
+
+            select.value = selectedObjectType;
+            select.addEventListener('change', handleItemChange);
+
+            document.getElementById('mode-btn-click').addEventListener('click', () => setMode(MODES.CLICK));
+            document.getElementById('mode-btn-line').addEventListener('click', () => setMode(MODES.LINE));
+            document.getElementById('mode-btn-clone').addEventListener('click', () => {
+                if (currentMode === MODES.CLONE && clonedArea !== null) {
+                    // If in clone placement mode, clicking clone button resets selection and stays in clone selection mode
+                    clonedArea = null;
+                    drawGrid();
+                }
+                setMode(MODES.CLONE);
+            });
+            document.getElementById('mode-btn-delete').addEventListener('click', () => setMode(MODES.DELETE));
+
+            // Initial modal display
+            helpModalOverlay.classList.add('visible');
+            helpModalOverlay.classList.remove('hidden');
+        }
+
+        // Run the initialization once the DOM is fully loaded
+        window.onload = init;
+    </script>
+</head>
+<body class="flex flex-col items-center justify-start h-screen">
+    <div class="app-container">
+        <div class="text-white text-center mb-4 mt-4 relative w-full max-w-7xl">
+            <h1 id="main-title" class="text-3xl font-bold text-white mb-2 shadow-lg p-2 rounded-lg bg-indigo-700/50">
+                Devast Base Editor
+            </h1>
+            <p class="text-sm text-gray-400">
+                Current Mode: <span id="current-mode-display" class="font-semibold text-yellow-400">Click (Single Place/Toggle)</span>. Press **H** for help/controls.
+            </p>
+            <div class="absolute top-0 right-0 p-3 bg-gray-700/50 rounded-lg shadow-xl backdrop-blur-sm flex flex-col items-stretch space-y-2 max-w-xs md:max-w-none">
+                <div class="p-2 bg-gray-600 rounded-md text-sm font-semibold text-center text-white border border-gray-500">
+                    Total Blocks: <span id="block-count" class="text-yellow-300">0</span>
+                </div>
+                <label for="item-select" class="text-xs text-gray-200 block mt-2">Place Feature:</label>
+                <select id="item-select" class="p-2 text-sm bg-gray-800 text-white border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-150" onchange="handleItemChange(event)">
+                    </select>
+                <div class="flex justify-between space-x-2 p-1 bg-gray-800 rounded-md">
+                    <button id="mode-btn-click" class="mode-btn" title="Click Mode (Single Place/Toggle)">
+                        🖱️
+                    </button>
+                    <button id="mode-btn-line" class="mode-btn" title="Line Mode (Drag to Place)">
+                        📏
+                    </button>
+                    <button id="mode-btn-clone" class="mode-btn" title="Clone Mode (Drag to Select Area, Click to Place)">
+                        📋
+                    </button>
+                    <button id="mode-btn-delete" class="mode-btn" title="Delete Mode (Drag to Erase Area)">
+                        🗑️
+                    </button>
+                </div>
+                <button id="generate-code-btn" class="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm rounded-md shadow-lg transition duration-200 transform hover:scale-[1.02]">
+                    Generate Map Code
+                </button>
+            </div>
+        </div>
+
+        <div class="flex flex-grow items-center justify-center w-full max-w-full rounded-xl mb-4">
+            <canvas id="gridCanvas"></canvas>
+        </div>
+
+        <div id="code-output-container" class="w-full max-w-4xl p-4 bg-gray-800 rounded-lg shadow-2xl mb-8 hidden">
+            <h2 class="text-xl font-bold text-gray-100 mb-3">Map Code Interface</h2>
+            <div class="mb-4">
+                <label for="map-code-input" class="text-gray-300 text-sm mb-1 block">Paste Map Code to Load Blocks:</label>
+                <textarea id="map-code-input" rows="3" class="w-full p-3 bg-gray-900 text-yellow-300 border border-gray-700 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Paste your !b=ID:X:Y:R code string here..."></textarea>
+                <button id="load-map-btn" class="mt-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md transition duration-150">
+                    Load Map
+                </button>
+            </div>
+            <hr class="border-gray-700 mb-4">
+            <label for="map-code-output" class="text-gray-300 text-sm mb-1 block">Generated Map Code (Export):</label>
+            <textarea id="map-code-output" rows="5" class="w-full p-3 bg-gray-900 text-green-300 border border-gray-700 rounded-md"></textarea>
+            <button id="copy-code-btn" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition duration-150">
+                Copy Code to Clipboard
+            </button>
+        </div>
+    </div>
+
+    <div id="helpModalOverlay" class="modal-overlay hidden">
+        <div id="helpModal" class="modal-content bg-gray-800 text-white p-6 rounded-xl shadow-2xl w-full max-w-lg border-2 border-indigo-500">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-2xl font-extrabold text-indigo-400">Base Editor Controls & Modes</h2>
+                <button onclick="toggleHelpModal()" class="text-gray-300 hover:text-white transition duration-150 p-1 rounded-full bg-gray-700 hover:bg-red-600 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="border-t border-indigo-700 pt-4 space-y-4">
+                <h3 class="text-xl font-semibold text-indigo-300">Navigation</h3>
+                <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
+                    <li>**Zoom**: Use the **Scroll Wheel** (or pinch on touch devices).</li>
+                    <li>**Pan/Move**: Use **WASD** keys or **Middle Mouse Click & Drag**.</li>
+                    <li>**Rotate Ghost Preview**: Press **R** to rotate the object ghost before placing (only for applicable items like 3x1 features, **Fridge**, **Low Wall**, or **Bag**).</li>
+                    <li>**Toggle Help**: Press **H** to show/hide this modal.</li>
+                </ul>
+                <h3 class="text-xl font-semibold text-indigo-300">Placement Modes</h3>
+                <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
+                    <li>**Click (🖱️)**: Single click to place or remove the selected object.</li>
+                    <li>**Line (📏)**: Click and drag to quickly place objects in a straight line (horizontal or vertical).</li>
+                    <li>**Clone (📋)**: First drag a box to select an area, then click to place the copy of that area.</li>
+                    <li>**Delete (🗑️)**: Click and drag a box to delete all objects within that area.</li>
+                </ul>
+            </div>
+            <div class="mt-6 text-center text-sm text-gray-500 border-t border-gray-700 pt-3">
+                <p>The base grid is **149x149**. Start building by closing this window!</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
