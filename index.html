@@ -185,6 +185,7 @@
                     <li>**Zoom**: Use the **Scroll Wheel** (or pinch on touch devices).</li>
                     <li>**Pan/Move**: Use **WASD** keys or **Middle Mouse Click & Drag**.</li>
                     <li>**Rotate Ghost Preview**: Press **R** to rotate the object ghost before placing (only for applicable items like 3x1 features, **Fridge**, **Door**, or **Bag**).</li>
+                    <li>**Toggle Layer View**: Press **G** to make walls and features transparent, showing the floor layer.</li>
                     <li>**Toggle Help**: Press **H** to show/hide this modal.</li>
                 </ul>
 
@@ -218,7 +219,7 @@
             const MAX_ZOOM = 40;
             const MIN_ZOOM = 10;
             
-            // Define colors - MODIFIED GHOST_BORDER to #777777
+            // Define colors
             const COLORS = {
                 GRID_LINE: '#333333',
                 FRIDGE: '#4a4a4a',
@@ -250,6 +251,9 @@
                 'Bag': { color: COLORS.BAG, size: [1, 1], rotatable: true, cost: 1, icon: '🛍️' },
                 'Stash Box': { color: COLORS.STASH_BOX, size: [1, 1], cost: 2, icon: '📦' },
             };
+            
+            // Objects considered "floor" for the layering function
+            const FLOOR_OBJECT_TYPES = ['Wood Plank', 'Metal Plank'];
 
             // --- State Variables ---
             let grid = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
@@ -268,6 +272,7 @@
             let cloneBuffer = [];
             let cloneSelectBox = null;
             let isHelpVisible = true; // Show help on load
+            let isLayerMode = false; // NEW STATE for layering
 
             // --- Utility Functions ---
 
@@ -366,6 +371,21 @@
                             const { color, size } = OBJECTS[type];
                             const [w, h] = getObjectSize(type, rotation);
 
+                            // --- LAYERING LOGIC ---
+                            if (isLayerMode) {
+                                if (FLOOR_OBJECT_TYPES.includes(type)) {
+                                    // Floor components are fully visible
+                                    ctx.globalAlpha = 1.0;
+                                } else {
+                                    // All other components are transparent
+                                    ctx.globalAlpha = 0.2; 
+                                }
+                            } else {
+                                // Normal view, fully opaque
+                                ctx.globalAlpha = 1.0;
+                            }
+                            // --- END LAYERING LOGIC ---
+
                             ctx.fillStyle = color;
                             ctx.fillRect(c * currentTileSize, r * currentTileSize, w * currentTileSize, h * currentTileSize);
 
@@ -376,6 +396,9 @@
                         }
                     }
                 }
+                
+                // Reset global alpha back to 1.0 for the rest of the drawing (ghosts, etc.)
+                ctx.globalAlpha = 1.0;
 
                 // 3. Draw Preview Ghost (if applicable)
                 if (mouseX >= 0 && mouseY >= 0 && currentMode !== 'delete' && currentMode !== 'clone') {
@@ -393,7 +416,7 @@
                         
                         // Rotatable object border (the "highlighted border" for fridge)
                         if (rotatable) {
-                            ctx.strokeStyle = COLORS.GHOST_BORDER; // The modified color!
+                            ctx.strokeStyle = COLORS.GHOST_BORDER; 
                             ctx.lineWidth = 2;
                             ctx.strokeRect(tileX * currentTileSize, tileY * currentTileSize, w * currentTileSize, h * currentTileSize);
                         }
@@ -425,7 +448,6 @@
                             fillColor = COLORS.SELECT_BOX;
                             strokeColor = COLORS.SELECTED_OBJECT;
                         } else { // Line mode
-                            // Line mode uses a smaller box logic, but this is fine for the area preview
                             fillColor = COLORS.SELECT_BOX;
                             strokeColor = COLORS.SELECTED_OBJECT;
                         }
@@ -534,16 +556,11 @@
                     return false;
                 }
                 
-                // 2. Clear space *before* placing the new object
-                // It's crucial to only clear object *origins* (the top-left tile) when placing a new multi-tile object, 
-                // but the current grid structure needs simplification for multi-tile objects.
-                // For simplicity, we'll assume all existing objects are 1x1 for now, or ensure multi-tile objects are correctly managed by `origin` property.
-
-                // 3. Place the new object
+                // 2. Clear space (implicitly by overwriting) and Place the new object
                 const newObject = { type, rotation, origin: true };
                 grid[r][c] = newObject;
 
-                // 4. Mark all covered tiles (for multi-tile objects)
+                // 3. Mark all covered tiles (for multi-tile objects)
                 for (let row = r; row < r + h; row++) {
                     for (let col = c; col < c + w; col++) {
                         // Don't overwrite the origin tile's properties
@@ -552,10 +569,6 @@
                         }
                     }
                 }
-                
-                // 5. Clear old object if any single tile object existed there before overwriting
-                // This logic is complex with the current structure. A simpler approach is to rely on `canPlace`
-                // and the fact that we clear the old object implicitly by overwriting grid[r][c].
                 
                 showInfo(`Placed ${type} at [${c}, ${r}].`, COLORS.INFO);
                 updateCostDisplay();
@@ -588,13 +601,16 @@
                     }
                     
                     // Clear the entire object area
-                    const { rotation } = grid[originR][originC];
+                    const originCell = grid[originR][originC];
+                    if (!originCell) return; // Already cleared by another part of the same object
+
+                    const { rotation } = originCell;
                     const [w, h] = getObjectSize(objType, rotation);
                     
                     for (let row = originR; row < originR + h; row++) {
                         for (let col = originC; col < originC + w; col++) {
                             // Check that the cell belongs to the object being deleted (optional safety check)
-                            if (grid[row][col] && grid[row][col].type === objType) {
+                            if (grid[row][col]) {
                                 grid[row][col] = null;
                             }
                         }
@@ -746,9 +762,11 @@
                                 objectInfo = cell.type;
                             }
                         }
-                        showInfo(`Tile [${tileX}, ${tileY}] - Object: ${objectInfo} - Mode: ${currentMode} - Selected: ${currentObject}`, COLORS.INFO);
+                        let layerMsg = isLayerMode ? " | Layer View ON (G)" : " | Layer View OFF (G)";
+                        showInfo(`Tile [${tileX}, ${tileY}] - Object: ${objectInfo} - Mode: ${currentMode} - Selected: ${currentObject}${layerMsg}`, COLORS.INFO);
                     } else {
-                        showInfo(`Mode: ${currentMode} - Selected: ${currentObject}`, COLORS.INFO);
+                        let layerMsg = isLayerMode ? " | Layer View ON (G)" : " | Layer View OFF (G)";
+                        showInfo(`Mode: ${currentMode} - Selected: ${currentObject}${layerMsg}`, COLORS.INFO);
                     }
                 }
 
@@ -868,7 +886,19 @@
                     } else {
                         showInfo(`${currentObject} is not rotatable.`, COLORS.WARNING);
                     }
-                } else if (event.key === 'h' || event.key === 'H') {
+                } 
+                // --- NEW G KEY LAYER TOGGLE ---
+                else if (event.key === 'g' || event.key === 'G') {
+                    isLayerMode = !isLayerMode;
+                    if (isLayerMode) {
+                        showInfo('Layer View ON: Walls/Features Transparent (G to toggle)', COLORS.WARNING);
+                    } else {
+                        showInfo('Layer View OFF: Normal View (G to toggle)', COLORS.INFO);
+                    }
+                    drawGrid();
+                }
+                // --- END NEW G KEY LAYER TOGGLE ---
+                else if (event.key === 'h' || event.key === 'H') {
                     // Toggle Help Modal
                     isHelpVisible = !isHelpVisible;
                     helpModal.classList.toggle('hidden', !isHelpVisible);
@@ -926,7 +956,21 @@
                         let loadedCount = 0;
                         
                         objectArray.forEach(obj => {
-                            if (placeObject(obj.r, obj.c, obj.type, obj.rotation)) {
+                            // We need to re-implement the multi-tile logic on load
+                            const [w, h] = getObjectSize(obj.type, obj.rotation);
+
+                            if (obj.r >= 0 && obj.r + h <= GRID_SIZE && obj.c >= 0 && obj.c + w <= GRID_SIZE) {
+                                // Place the origin
+                                grid[obj.r][obj.c] = { type: obj.type, rotation: obj.rotation, origin: true };
+                                
+                                // Mark covered tiles
+                                for (let r = obj.r; r < obj.r + h; r++) {
+                                    for (let c = obj.c; c < obj.c + w; c++) {
+                                        if (r !== obj.r || c !== obj.c) {
+                                            grid[r][c] = { type: obj.type, origin: false, parent: {r: obj.r, c: obj.c} };
+                                        }
+                                    }
+                                }
                                 loadedCount++;
                             }
                         });
