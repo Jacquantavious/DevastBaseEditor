@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Devast Base Editor (H for Help)</title>
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom CSS for Game/App Styling */
@@ -25,84 +26,73 @@
             height: 100%;
             overflow-y: auto; /* Allow scrolling if content is taller than screen */
         }
-        /* Style the canvas to ensure it doesn't cause overflow and is treated as a block element */
+        /* Style the canvas for size and visual impact */
         #gridCanvas {
-            max-width: 90vh; /* Limit size to viewport height */
-            max-height: 90vh; /* Limit size to viewport height */
+            /* Updated size to be 95% of the viewport's minimum dimension (width or height) */
+            width: 95vmin; 
+            height: 95vmin; 
             margin: auto;
             display: block;
-            border: 2px solid #505050; /* Subtle border around the whole grid */
-            border-radius: 0.5rem;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            touch-action: none; /* Disable default touch actions on canvas */
+            border: 2px solid #4a4a4a; /* Subtle border around the whole grid */
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); /* Add shadow for depth */
+            touch-action: none; /* Prevent default touch behavior (like scrolling) */
         }
-
-        /* Utility classes for interactivity and appearance */
-        .sidebar {
-            background: #2a2a2a;
-            border-radius: 0.75rem;
-            padding: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            max-height: calc(100vh - 4rem);
-            overflow-y: auto;
+        /* Hide scroll bar but allow scrolling */
+        .app-container::-webkit-scrollbar {
+            display: none;
+        }
+        .app-container {
+            -ms-overflow-style: none; /* IE and Edge */
             scrollbar-width: none; /* Firefox */
-        }
-        .sidebar::-webkit-scrollbar {
-            display: none; /* Chrome, Safari */
-        }
-        .item-button {
-            transition: all 0.1s;
-            transform-origin: center;
-            border: 2px solid transparent;
-        }
-        .item-button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 10px rgba(79, 70, 229, 0.5);
-        }
-        .item-button.selected {
-            border-color: #4f46e5;
-            box-shadow: 0 0 15px #4f46e5;
-            transform: scale(1.1);
         }
     </style>
 </head>
-<body class="bg-[#1a1a1a] flex flex-col h-full">
+<body class="bg-gray-900 text-gray-100">
 
-    <!-- Header -->
-    <header class="w-full bg-[#2a2a2a] p-3 shadow-lg fixed top-0 z-10">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-indigo-400">Base Grid Editor</h1>
-            <div id="coordinateDisplay" class="text-sm text-gray-400 font-mono tracking-wider bg-[#1a1a1a] px-3 py-1 rounded-full shadow-inner">
-                X: 0, Y: 0 | Selected: Stone Wall
-            </div>
-            <button id="helpButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-3 rounded-lg shadow-md transition duration-150">
-                H for Help
-            </button>
+    <!-- Tool Selection Bar -->
+    <div id="toolbar" class="fixed top-0 left-0 right-0 p-2 bg-gray-800/90 shadow-lg flex flex-wrap justify-center items-center gap-2 z-20 border-b border-gray-700">
+        <!-- Object Selection -->
+        <div class="flex gap-2 p-1 bg-gray-700 rounded-lg shadow-inner">
+            <button data-item="Wall" class="toolbar-item px-3 py-1 text-sm rounded-md bg-indigo-600 hover:bg-indigo-700 transition shadow-md">Wall</button>
+            <button data-item="Foundation" class="toolbar-item px-3 py-1 text-sm rounded-md bg-gray-600 hover:bg-gray-700 transition shadow-md">Floor</button>
+            <button data-item="Door" class="toolbar-item px-3 py-1 text-sm rounded-md bg-gray-600 hover:bg-gray-700 transition shadow-md">Door</button>
+            <button data-item="Fridge" class="toolbar-item px-3 py-1 text-sm rounded-md bg-gray-600 hover:bg-gray-700 transition shadow-md">Fridge</button>
+            <button data-item="Bag" class="toolbar-item px-3 py-1 text-sm rounded-md bg-gray-600 hover:bg-gray-700 transition shadow-md">Bag</button>
+            <button data-item="Turret" class="toolbar-item px-3 py-1 text-sm rounded-md bg-red-600 hover:bg-red-700 transition shadow-md">Turret</button>
         </div>
-    </header>
-
-    <!-- Main Content Area -->
-    <div class="flex flex-1 pt-16 pb-4 overflow-hidden">
-
-        <!-- Sidebar (Item Selection) -->
-        <div id="itemSelection" class="sidebar w-1/4 max-w-xs ml-4 mr-2 hidden md:block">
-            <h2 class="text-xl font-bold text-gray-200 mb-4 border-b border-gray-600 pb-2">Select Object</h2>
-            <div id="itemButtons" class="grid grid-cols-2 gap-3">
-                <!-- Buttons will be generated here -->
-            </div>
+        
+        <!-- Placement Mode Selection -->
+        <div class="flex gap-2 p-1 bg-gray-700 rounded-lg shadow-inner">
+            <button data-mode="click" class="mode-item px-3 py-1 text-sm rounded-md bg-green-600 hover:bg-green-700 transition shadow-md">Click (🖱️)</button>
+            <button data-mode="line" class="mode-item px-3 py-1 text-sm rounded-md bg-gray-600 hover:bg-gray-700 transition shadow-md">Line (📏)</button>
+            <button data-mode="clone" class="mode-item px-3 py-1 text-sm rounded-md bg-gray-600 hover:bg-gray-700 transition shadow-md">Clone (📋)</button>
+            <button data-mode="delete" class="mode-item px-3 py-1 text-sm rounded-md bg-red-500 hover:bg-red-600 transition shadow-md">Delete (🗑️)</button>
         </div>
 
-        <!-- Canvas Container -->
-        <div id="canvasContainer" class="flex-1 flex justify-center items-center p-2">
-            <canvas id="gridCanvas" class="bg-white"></canvas>
+        <!-- Utility Buttons -->
+        <div class="flex gap-2 p-1 bg-gray-700 rounded-lg shadow-inner">
+            <button id="clearBtn" class="px-3 py-1 text-sm rounded-md bg-yellow-600 hover:bg-yellow-700 transition shadow-md">Clear All</button>
+            <button id="helpBtn" class="px-3 py-1 text-sm rounded-md bg-blue-600 hover:bg-blue-700 transition shadow-md">Help (H)</button>
+        </div>
+    </div>
+    
+    <!-- Main Application Container -->
+    <div class="app-container pt-20">
+        <!-- Canvas -->
+        <canvas id="gridCanvas"></canvas>
+
+        <!-- Message/Status Box (for non-alert messages) -->
+        <div id="messageBox" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-sm px-4 py-2 rounded-lg shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none z-30">
+            Message goes here
         </div>
     </div>
 
-    <!-- Modal Background -->
-    <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-20 items-center justify-center">
-        <div class="bg-[#2a2a2a] p-8 rounded-xl shadow-2xl max-w-lg w-full transform scale-100 transition-transform duration-300">
-            <h2 class="text-3xl font-bold text-indigo-400 mb-4 border-b border-gray-700 pb-2">Editor Help & Controls</h2>
-            <div class="space-y-4">
+    <!-- Help Modal (Hidden by default) -->
+    <div id="helpModal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center transition-opacity duration-300 hidden">
+        <div class="bg-gray-800 rounded-xl p-8 max-w-lg w-full shadow-2xl border border-gray-700">
+            <h2 class="text-3xl font-bold text-indigo-400 mb-4 border-b border-indigo-500 pb-2">Base Editor Controls</h2>
+            
+            <div class="space-y-6">
                 <h3 class="text-xl font-semibold text-indigo-300">Navigation</h3>
                 <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
                     <li>**Zoom**: Use the **Scroll Wheel** (or pinch on touch devices).</li>
@@ -127,908 +117,794 @@
     </div>
 
     <script type="module">
-        // Global variables for Firebase access (required for state persistence)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, query, runTransaction, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // --- Firebase Setup ---
-        let db, auth, userId = null;
-        let isAuthReady = false;
-        
-        // Uncomment to enable Firestore debug logs
-        // setLogLevel('Debug');
+        // --- FIREBASE SETUP ---
+        setLogLevel('Debug');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'devast-base-editor';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        if (firebaseConfig) {
-            const app = initializeApp(firebaseConfig);
+        let app, db, auth, userId;
+        let isAuthReady = false;
+
+        if (Object.keys(firebaseConfig).length > 0) {
+            app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
-
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    userId = user.uid;
-                } else {
-                    try {
-                        // Sign in anonymously if no user is present (should only happen if token is missing)
-                        await signInAnonymously(auth);
-                        userId = auth.currentUser.uid;
-                    } catch (error) {
-                        console.error("Error signing in anonymously:", error);
-                        // Fallback to random ID if anonymous sign-in fails
-                        userId = crypto.randomUUID(); 
-                    }
-                }
-                isAuthReady = true;
-                // Once authenticated, start listening for data
-                if (db) setupFirestoreListener();
-            });
-
-            // Initial custom token sign-in if available
-            if (initialAuthToken) {
-                signInWithCustomToken(auth, initialAuthToken).catch(error => {
-                    console.error("Custom token sign-in failed:", error);
-                });
-            } else if (!auth.currentUser) {
-                // If no token and no current user, let onAuthStateChanged handle anonymous sign-in
-            }
-
-        } else {
-            console.error("Firebase config is missing. Data persistence is disabled.");
-            userId = 'local-user'; // Use a mock ID for local development
-            isAuthReady = true;
-        }
-
-        // --- Grid and Canvas Setup ---
-        const GRID_SIZE = 149; // Max size 149x149
-        const TILE_SIZE = 32; // Default size in pixels
-        const CANVAS_ID = 'gridCanvas';
-        const canvas = document.getElementById(CANVAS_ID);
-        const ctx = canvas.getContext('2d');
-        
-        let offsetX = 0; // Viewport offset X
-        let offsetY = 0; // Viewport offset Y
-        let zoom = 1.0;  // Zoom level
-
-        let gridData = {}; // Stores placed objects: { 'x,y': { id: N, rot: R } }
-        let selectedItem = null;
-        let selectedItemId = 1; // Default to Stone Wall
-
-        // --- Interaction State ---
-        let isDragging = false;
-        let lastMouseX = 0;
-        let lastMouseY = 0;
-        let rotation = 0; // 0, 1, 2, 3 for 0, 90, 180, 270 degrees
-        let isDrawingLine = false;
-        let isCloning = false;
-        let isDeleting = false;
-        let startGridX = 0;
-        let startGridY = 0;
-        let currentGridX = 0;
-        let currentGridY = 0;
-        let mode = 'click'; // 'click', 'line', 'clone', 'delete'
-
-        // --- Item Definitions and Drawing Functions ---
-
-        // Base drawing for 1x1 objects
-        function drawSimpleBlock(ctx, x, y, size, rotation, isGhost, color) {
-            ctx.fillStyle = isGhost ? `rgba(${hexToRgb(color)}, 0.4)` : color;
-            ctx.fillRect(x, y, size, size);
-            ctx.strokeStyle = isGhost ? 'rgba(0,0,0,0.5)' : color;
-            ctx.lineWidth = 1;
-            ctx.strokeRect(x, y, size, size);
-        }
-
-        function hexToRgb(hex) {
-            const r = parseInt(hex.slice(1, 3), 16);
-            const g = parseInt(hex.slice(3, 5), 16);
-            const b = parseInt(hex.slice(5, 7), 16);
-            return `${r}, ${g}, ${b}`;
-        }
-
-        // Specific Drawing Functions
-        function drawWall(ctx, x, y, size, rotation, isGhost = false, color) {
-            const fill = isGhost ? `rgba(${hexToRgb(color)}, 0.4)` : color;
-            ctx.fillStyle = fill;
-            ctx.fillRect(x, y, size, size);
-
-            ctx.strokeStyle = isGhost ? 'rgba(0,0,0,0.5)' : '#666666';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x, y, size, size);
-        }
-
-        // NEW: Drawing function for half-height walls
-        function drawHalfWall(ctx, x, y, size, rotation, isGhost = false, color) {
-            const halfHeight = size * 0.5;
-            const startY = y + (size - halfHeight); // Start drawing from the middle down
-
-            const fill = isGhost ? `rgba(${hexToRgb(color)}, 0.4)` : color;
-            ctx.fillStyle = fill;
-            ctx.fillRect(x, startY, size, halfHeight);
-
-            // Outline for clarity
-            ctx.strokeStyle = isGhost ? 'rgba(0,0,0,0.5)' : '#666666';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x, startY, size, halfHeight);
-        }
-
-        function drawDoor(ctx, x, y, size, rotation, isGhost = false, color) {
-            const fill = isGhost ? `rgba(${hexToRgb(color)}, 0.4)` : color;
-            ctx.fillStyle = fill;
-            ctx.fillRect(x, y, size, size);
             
-            ctx.fillStyle = isGhost ? 'rgba(0,0,0,0.6)' : '#333333';
-            // Draw a vertical line representing the door
-            if (rotation % 2 === 0) { // 0 or 2 (up/down orientation)
-                ctx.fillRect(x + size * 0.4, y, size * 0.2, size);
-            } else { // 1 or 3 (left/right orientation)
-                ctx.fillRect(x, y + size * 0.4, size, size * 0.2);
-            }
-        }
-
-        function drawBag(ctx, x, y, size, rotation, isGhost = false, color) {
-            const fill = isGhost ? `rgba(${hexToRgb(color)}, 0.4)` : color;
-            ctx.fillStyle = fill;
-            ctx.fillRect(x, y, size, size);
-            
-            ctx.fillStyle = isGhost ? 'rgba(0,0,0,0.6)' : '#795548';
-            ctx.fillRect(x + size * 0.1, y + size * 0.1, size * 0.8, size * 0.8);
-            
-            // Draw an X to represent the bag/container
-            ctx.strokeStyle = isGhost ? 'rgba(255,255,255,0.7)' : '#FFFFFF';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(x + size * 0.2, y + size * 0.2);
-            ctx.lineTo(x + size * 0.8, y + size * 0.8);
-            ctx.moveTo(x + size * 0.8, y + size * 0.2);
-            ctx.lineTo(x + size * 0.2, y + size * 0.8);
-            ctx.stroke();
-        }
-
-        function drawFridge(ctx, x, y, size, rotation, isGhost = false, color) {
-            const fill = isGhost ? `rgba(${hexToRgb(color)}, 0.4)` : color;
-            ctx.fillStyle = fill;
-            ctx.fillRect(x, y, size, size);
-
-            // Door handle
-            ctx.fillStyle = isGhost ? 'rgba(255,255,255,0.7)' : '#A0A0A0';
-            ctx.fillRect(x + size * 0.7, y + size * 0.15, size * 0.1, size * 0.7);
-        }
-
-        // The master list of placeable objects
-        const items = [
-            // Structural Walls (ID 1-9)
-            { id: 1, name: 'Stone Wall', color: '#999999', size: 1, structure: true, width: 1, height: 1, blocks: 1, rotate: false, draw: drawWall },
-            { id: 2, name: 'Wooden Wall', color: '#A0522D', size: 1, structure: true, width: 1, height: 1, blocks: 1, rotate: false, draw: drawWall },
-            { id: 3, name: 'Brick Wall', color: '#B22222', size: 1, structure: true, width: 1, height: 1, blocks: 1, rotate: false, draw: drawWall },
-            { id: 4, name: 'Metal Wall', color: '#888888', size: 1, structure: true, width: 1, height: 1, blocks: 1, rotate: false, draw: drawWall },
-            
-            // NEW ITEM: Metal Low Wall
-            { id: 70, name: 'Metal Low Wall', color: '#888888', size: 1, structure: true, width: 1, height: 0.5, blocks: 1, rotate: false, draw: drawHalfWall },
-
-            // Doors/Gates (ID 10-11)
-            { id: 10, name: 'Door', color: '#D2B48C', size: 1, structure: false, width: 1, height: 1, blocks: 1, rotate: true, draw: drawDoor },
-            { id: 11, name: 'Metal Gate', color: '#696969', size: 3, structure: false, width: 3, height: 1, blocks: 3, rotate: true, draw: drawDoor },
-
-            // Storage/Utility (ID 12-19)
-            // FRIDGE COLOR UPDATED to #000000 (Black)
-            { id: 12, name: 'Fridge', color: '#000000', size: 1, structure: false, width: 1, height: 1, blocks: 1, rotate: true, draw: drawFridge },
-            { id: 13, name: 'Bag', color: '#8B4513', size: 1, structure: false, width: 1, height: 1, blocks: 1, rotate: true, draw: drawBag },
-            { id: 14, name: 'Small Box', color: '#CD853F', size: 1, structure: false, width: 1, height: 1, blocks: 1, rotate: false, draw: drawSimpleBlock },
-            { id: 15, name: 'Large Chest', color: '#8B4513', size: 2, structure: false, width: 2, height: 1, blocks: 2, rotate: false, draw: drawSimpleBlock },
-            { id: 16, name: 'Workbench', color: '#555555', size: 3, structure: false, width: 3, height: 1, blocks: 3, rotate: true, draw: drawSimpleBlock },
-            
-            // Traps/Defenses (ID 20+)
-            { id: 20, name: 'Spikes', color: '#CC0000', size: 1, structure: false, width: 1, height: 1, blocks: 1, rotate: false, draw: drawSimpleBlock },
-            { id: 21, name: 'Tesla Coil', color: '#00BFFF', size: 1, structure: false, width: 1, height: 1, blocks: 1, rotate: false, draw: drawSimpleBlock },
-        ];
-
-        // --- Core Functions ---
-
-        // Find an item by its ID
-        function getItem(id) {
-            return items.find(item => item.id === id);
-        }
-
-        // Get the item currently selected by the user
-        function getCurrentItem() {
-            return items.find(item => item.id === selectedItemId);
-        }
-
-        // Draw the main grid and objects
-        function drawGrid() {
-            // Set canvas size dynamically based on its container, maintaining max size
-            const container = document.getElementById('canvasContainer');
-            const maxCanvasSize = Math.min(container.clientWidth, container.clientHeight) * 0.95;
-            const size = Math.min(maxCanvasSize, TILE_SIZE * GRID_SIZE * zoom);
-            
-            canvas.width = size;
-            canvas.height = size;
-            
-            // Calculate effective tile size based on zoom
-            const effectiveTileSize = canvas.width / (GRID_SIZE * zoom);
-
-            // Clear canvas and draw background
-            ctx.fillStyle = '#222222';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Determine visible grid area (only draw what's on screen)
-            const startX = Math.floor(offsetX);
-            const startY = Math.floor(offsetY);
-            const endX = Math.ceil(offsetX + canvas.width / effectiveTileSize);
-            const endY = Math.ceil(offsetY + canvas.height / effectiveTileSize);
-
-            // Draw grid lines
-            ctx.strokeStyle = '#333333';
-            ctx.lineWidth = 1;
-
-            // Draw vertical lines
-            for (let x = startX; x <= endX; x++) {
-                const drawX = (x - offsetX) * effectiveTileSize;
-                if (drawX >= 0 && drawX <= canvas.width) {
-                    ctx.beginPath();
-                    ctx.moveTo(drawX, 0);
-                    ctx.lineTo(drawX, canvas.height);
-                    ctx.stroke();
-                }
-            }
-
-            // Draw horizontal lines
-            for (let y = startY; y <= endY; y++) {
-                const drawY = (y - offsetY) * effectiveTileSize;
-                if (drawY >= 0 && drawY <= canvas.height) {
-                    ctx.beginPath();
-                    ctx.moveTo(0, drawY);
-                    ctx.lineTo(canvas.width, drawY);
-                    ctx.stroke();
-                }
-            }
-
-            // Draw placed objects
-            for (const key in gridData) {
-                const [gx, gy] = key.split(',').map(Number);
-                const obj = gridData[key];
-                const item = getItem(obj.id);
-
-                if (!item) continue; // Skip unknown IDs
-
-                const drawX = (gx - offsetX) * effectiveTileSize;
-                const drawY = (gy - offsetY) * effectiveTileSize;
-
-                // Only draw if within bounds
-                if (drawX + effectiveTileSize > 0 && drawX < canvas.width &&
-                    drawY + effectiveTileSize > 0 && drawY < canvas.height) {
-                    
-                    ctx.save();
-                    // Translate to the center of the drawing area for rotation
-                    if (item.rotate) {
-                        ctx.translate(drawX + effectiveTileSize / 2, drawY + effectiveTileSize / 2);
-                        ctx.rotate(obj.rot * Math.PI / 2); // 0, 90, 180, 270 degrees
-                        item.draw(ctx, -effectiveTileSize / 2, -effectiveTileSize / 2, effectiveTileSize, obj.rot, false, item.color);
+            // Authenticate and set up user ID
+            async function authenticate() {
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
                     } else {
-                        item.draw(ctx, drawX, drawY, effectiveTileSize, obj.rot, false, item.color);
+                        await signInAnonymously(auth);
                     }
-                    ctx.restore();
+                    userId = auth.currentUser?.uid || crypto.randomUUID();
+                    isAuthReady = true;
+                    console.log("Firebase initialized. User ID:", userId);
+                    // Update the visible user ID
+                    document.getElementById('userIdDisplay').textContent = `User: ${userId}`;
+                    setupRealtimeListener();
+                } catch (error) {
+                    console.error("Firebase Auth Error:", error);
+                    userId = crypto.randomUUID(); // Fallback to a random ID
+                    isAuthReady = true;
+                    document.getElementById('userIdDisplay').textContent = `User: ${userId} (Anon)`;
+                    setupRealtimeListener();
                 }
             }
-            
-            // Highlight the cell under the mouse
-            drawGhostPreview(effectiveTileSize);
+            authenticate();
+        } else {
+            // Non-Firebase fallback (for local development/testing)
+            console.warn("Firebase config missing. Using local storage.");
+            userId = crypto.randomUUID();
+            isAuthReady = true;
+            document.getElementById('userIdDisplay').textContent = `User: ${userId} (Local)`;
         }
 
-        // Draw the ghost preview of the selected item or selection box
-        function drawGhostPreview(effectiveTileSize) {
-            if (currentGridX < 0 || currentGridX >= GRID_SIZE || currentGridY < 0 || currentGridY >= GRID_SIZE) return;
-
-            const item = getCurrentItem();
-            const drawX = (currentGridX - offsetX) * effectiveTileSize;
-            const drawY = (currentGridY - offsetY) * effectiveTileSize;
-
-            ctx.save();
-            ctx.strokeStyle = 'rgba(79, 70, 229, 0.8)'; // Indigo highlight
-            ctx.lineWidth = 3;
-            ctx.setLineDash([5, 5]);
-
-            if (isCloning || isDeleting) {
-                // Draw selection/delete box
-                const x1 = Math.min(startGridX, currentGridX);
-                const y1 = Math.min(startGridY, currentGridY);
-                const x2 = Math.max(startGridX, currentGridX);
-                const y2 = Math.max(startGridY, currentGridY);
-
-                const boxDrawX = (x1 - offsetX) * effectiveTileSize;
-                const boxDrawY = (y1 - offsetY) * effectiveTileSize;
-                const boxWidth = (x2 - x1 + 1) * effectiveTileSize;
-                const boxHeight = (y2 - y1 + 1) * effectiveTileSize;
-
-                ctx.fillStyle = isDeleting ? 'rgba(255, 0, 0, 0.2)' : 'rgba(79, 70, 229, 0.2)';
-                ctx.fillRect(boxDrawX, boxDrawY, boxWidth, boxHeight);
-                ctx.strokeRect(boxDrawX, boxDrawY, boxWidth, boxHeight);
-
-            } else if (isDrawingLine) {
-                // Draw line preview
-                ctx.strokeRect(drawX, drawY, effectiveTileSize, effectiveTileSize);
-
-                const lineX1 = Math.min(startGridX, currentGridX);
-                const lineY1 = Math.min(startGridY, currentGridY);
-                const lineX2 = Math.max(startGridX, currentGridX);
-                const lineY2 = Math.max(startGridY, currentGridY);
-
-                for (let x = lineX1; x <= lineX2; x++) {
-                    for (let y = lineY1; y <= lineY2; y++) {
-                        if (x === currentGridX || y === currentGridY) {
-                            const lineDrawX = (x - offsetX) * effectiveTileSize;
-                            const lineDrawY = (y - offsetY) * effectiveTileSize;
-                            
-                            ctx.save();
-                            ctx.globalAlpha = 0.5;
-                            ctx.fillStyle = `rgba(${hexToRgb(item.color)}, 0.3)`;
-                            ctx.fillRect(lineDrawX, lineDrawY, effectiveTileSize, effectiveTileSize);
-                            ctx.restore();
-                        }
-                    }
-                }
-            } else if (item) {
-                // Draw single item ghost
-                ctx.setLineDash([]);
-                
-                // Rotation logic for ghost
-                if (item.rotate) {
-                    ctx.translate(drawX + effectiveTileSize / 2, drawY + effectiveTileSize / 2);
-                    ctx.rotate(rotation * Math.PI / 2);
-                    item.draw(ctx, -effectiveTileSize / 2, -effectiveTileSize / 2, effectiveTileSize, rotation, true, item.color);
-                } else {
-                    item.draw(ctx, drawX, drawY, effectiveTileSize, rotation, true, item.color);
-                }
-                
-                ctx.strokeRect(-effectiveTileSize/2, -effectiveTileSize/2, effectiveTileSize, effectiveTileSize);
-            }
-
-            ctx.restore();
+        function getUserRef() {
+            if (!db || !userId) return null;
+            // Public collection path: /artifacts/{appId}/public/data/bases
+            return doc(db, 'artifacts', appId, 'public', 'data', 'bases', userId);
         }
 
-
-        // --- Interaction Handlers ---
-
-        function getGridCoords(clientX, clientY) {
-            const rect = canvas.getBoundingClientRect();
-            const canvasX = clientX - rect.left;
-            const canvasY = clientY - rect.top;
-
-            const effectiveTileSize = canvas.width / (GRID_SIZE * zoom);
-
-            const gridX = Math.floor(canvasX / effectiveTileSize + offsetX);
-            const gridY = Math.floor(canvasY / effectiveTileSize + offsetY);
-
-            // Clamp coordinates to grid bounds
-            const clampedX = Math.max(0, Math.min(GRID_SIZE - 1, gridX));
-            const clampedY = Math.max(0, Math.min(GRID_SIZE - 1, gridY));
-
-            return { gridX: clampedX, gridY: clampedY };
-        }
+        // --- GAME LOGIC ---
+        const canvas = document.getElementById('gridCanvas');
+        const ctx = canvas.getContext('2d');
+        const toolbar = document.getElementById('toolbar');
+        const helpModal = document.getElementById('helpModal');
+        const clearBtn = document.getElementById('clearBtn');
+        const helpBtn = document.getElementById('helpBtn');
+        const messageBox = document.getElementById('messageBox');
         
-        // Handle grid cell interactions (place/remove)
-        async function handleGridAction(gx, gy) {
-            const key = `${gx},${gy}`;
-            const item = getCurrentItem();
+        // Grid configuration
+        const GRID_SIZE = 149; // Devast grid size is 149x149
+        const MIN_CELL_PIXELS = 20; // Minimum size for a cell to be visible/drawable
+        let cellSize = 40; // Default cell size in pixels (will be recalculated)
+        let canvasSize = GRID_SIZE * cellSize; // Total canvas dimensions (will be recalculated)
 
-            if (mode === 'delete' || (mode === 'click' && gridData[key] && gridData[key].id === selectedItemId)) {
-                // Delete if in delete mode, or if in click mode and clicking on the same item
-                deleteObject(key);
-            } else if (mode === 'click' || mode === 'line') {
-                // Place or replace
-                if (item) {
-                    const obj = { id: item.id, rot: item.rotate ? rotation : 0 };
-                    await placeObject(key, obj);
-                }
-            }
+        // Camera and interaction state
+        let offsetX = 0;
+        let offsetY = 0;
+        let scale = 0.5; // Initial zoom level
+        let selectedItem = 'Wall';
+        let placementMode = 'click';
+        let rotation = 0; // 0, 90, 180, 270 (for applicable objects)
+
+        // Grid data structure: A map of 'x,y' to object type/rotation
+        let gridData = {}; // Format: { 'x,y': { type: 'Wall', rot: 0 } }
+
+        // Placement State for Line/Clone/Delete
+        let isDrawing = false;
+        let startGridX = -1;
+        let startGridY = -1;
+        let currentGridX = -1;
+        let currentGridY = -1;
+        let middleMousePanning = false;
+
+        // Object definitions (size is width x height in grid cells)
+        const OBJECTS = {
+            'Wall': { size: [1, 1], color: '#7a7a7a', rotatable: false, ghost: '#7a7a7a70' },
+            'Foundation': { size: [1, 1], color: '#4a4a4a', rotatable: false, ghost: '#4a4a4a70' },
+            'Door': { size: [1, 3], color: '#c49a3c', rotatable: true, ghost: '#c49a3c70' },
+            'Fridge': { size: [1, 3], color: '#3c6ac4', rotatable: true, ghost: '#3c6ac470' },
+            'Bag': { size: [1, 1], color: '#884dff', rotatable: true, ghost: '#884dff70' },
+            'Turret': { size: [1, 1], color: '#ff3333', rotatable: false, ghost: '#ff333370' },
+        };
+
+        // --- UTILITY FUNCTIONS ---
+
+        function showMessage(text, duration = 3000) {
+            messageBox.textContent = text;
+            messageBox.classList.remove('opacity-0', 'pointer-events-none');
+            messageBox.classList.add('opacity-100');
+            setTimeout(() => {
+                messageBox.classList.remove('opacity-100');
+                messageBox.classList.add('opacity-0', 'pointer-events-none');
+            }, duration);
         }
 
-        async function handleCloneAction(gx, gy) {
-            if (gx === startGridX && gy === startGridY) return;
+        function getGridCoordinates(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            let canvasX = clientX - rect.left;
+            let canvasY = clientY - rect.top;
 
-            const x1 = Math.min(startGridX, gx);
-            const y1 = Math.min(startGridY, gy);
-            const x2 = Math.max(startGridX, gx);
-            const y2 = Math.max(startGridY, gy);
+            // Apply pan and zoom
+            const worldX = (canvasX / scale) - offsetX;
+            const worldY = (canvasY / scale) - offsetY;
 
-            // 1. Identify the objects to clone (source area)
-            const objectsToClone = {};
-            for (let x = x1; x <= x2; x++) {
-                for (let y = y1; y <= y2; y++) {
-                    const key = `${x},${y}`;
-                    if (gridData[key]) {
-                        objectsToClone[key] = gridData[key];
-                    }
+            // Convert world coordinates to grid coordinates (0-indexed)
+            const gridX = Math.floor(worldX / cellSize);
+            const gridY = Math.floor(worldY / cellSize);
+
+            return { gridX, gridY };
+        }
+
+        function saveGrid() {
+            if (!isAuthReady || !db) {
+                // Local storage fallback for non-firebase mode
+                try {
+                    localStorage.setItem('devastBaseData', JSON.stringify(gridData));
+                    showMessage("Data saved locally (Firebase not configured).", 1500);
+                } catch (e) {
+                    console.error("Local Storage Save Error:", e);
                 }
-            }
-
-            // 2. Clear flags and switch mode to click for placement
-            isCloning = false;
-            mode = 'click';
-
-            if (Object.keys(objectsToClone).length === 0) {
-                console.log("No objects selected to clone.");
                 return;
             }
 
-            // 3. Set the first object in the cloned selection as the temporary selected item
-            const firstKey = Object.keys(objectsToClone)[0];
-            const firstObj = objectsToClone[firstKey];
-            const firstItem = getItem(firstObj.id);
-            if (firstItem) {
-                selectedItemId = firstItem.id;
-                selectedItem = firstItem;
-                rotation = firstObj.rot;
-                updateSelectionDisplay();
-            }
-
-            // 4. Update the mouse listener to handle placement on the next click
-            canvas.onmousedown = (e) => {
-                if (e.button === 0) { // Left click
-                    const { gridX: targetX, gridY: targetY } = getGridCoords(e.clientX, e.clientY);
-                    
-                    // The offset is calculated from the top-left corner of the source selection
-                    const offsetX = targetX - x1;
-                    const offsetY = targetY - y1;
-
-                    // Execute the placement transaction
-                    const batchData = {};
-                    for (const key in objectsToClone) {
-                        const [sourceX, sourceY] = key.split(',').map(Number);
-                        const targetKey = `${sourceX + offsetX},${sourceY + offsetY}`;
-                        const targetObj = objectsToClone[key];
-                        
-                        // Check bounds before adding to batch
-                        const [tx, ty] = targetKey.split(',').map(Number);
-                        if (tx >= 0 && tx < GRID_SIZE && ty >= 0 && ty < GRID_SIZE) {
-                            batchData[targetKey] = targetObj;
-                        }
-                    }
-
-                    if (Object.keys(batchData).length > 0) {
-                        placeBatch(batchData);
-                    }
-                    
-                    // Reset to click mode after batch placement
-                    resetInteractionState();
-                }
-            };
-        }
-        
-        async function handleDeleteAction(gx, gy) {
-            if (gx === startGridX && gy === startGridY) return;
-
-            const x1 = Math.min(startGridX, gx);
-            const y1 = Math.min(startGridY, gy);
-            const x2 = Math.max(startGridX, gx);
-            const y2 = Math.max(startGridY, gy);
-
-            const keysToDelete = [];
-            for (let x = x1; x <= x2; x++) {
-                for (let y = y1; y <= y2; y++) {
-                    const key = `${x},${y}`;
-                    if (gridData[key]) {
-                        keysToDelete.push(key);
-                    }
-                }
-            }
-            
-            if (keysToDelete.length > 0) {
-                await deleteBatch(keysToDelete);
-            }
-        }
-
-        async function handleLineAction(gx, gy) {
-            if (gx === startGridX && gy === startGridY) return;
-
-            const x1 = Math.min(startGridX, gx);
-            const y1 = Math.min(startGridY, gy);
-            const x2 = Math.max(startGridX, gx);
-            const y2 = Math.max(startGridY, gy);
-
-            const batchData = {};
-            const item = getCurrentItem();
-
-            for (let x = x1; x <= x2; x++) {
-                for (let y = y1; y <= y2; y++) {
-                    // Only draw straight lines (either X or Y must match the start point)
-                    if (x === startGridX || y === startGridY) {
-                        const key = `${x},${y}`;
-                        // Only place if item is defined
-                        if (item) {
-                            batchData[key] = { id: item.id, rot: item.rotate ? rotation : 0 };
-                        }
-                    }
-                }
-            }
-            
-            if (Object.keys(batchData).length > 0) {
-                await placeBatch(batchData);
-            }
-        }
-
-        function resetInteractionState() {
-            isDrawingLine = false;
-            isCloning = false;
-            isDeleting = false;
-            mode = 'click';
-            // Restore default mouse listeners
-            setupEventListeners();
-        }
-
-        // --- Event Listeners ---
-
-        function setupEventListeners() {
-            // Remove previous listeners to avoid duplicates, especially after clone mode
-            canvas.onmousedown = null; 
-            canvas.onmousemove = null;
-            canvas.onmouseup = null;
-            canvas.onwheel = null;
-            
-            // Mouse down handler
-            canvas.onmousedown = (e) => {
-                const { gridX, gridY } = getGridCoords(e.clientX, e.clientY);
-                startGridX = gridX;
-                startGridY = gridY;
-
-                if (e.button === 1 || e.button === 2) { // Middle or Right click for panning
-                    isDragging = true;
-                    lastMouseX = e.clientX;
-                    lastMouseY = e.clientY;
-                } else if (e.button === 0) { // Left click for action
-                    if (mode === 'click') {
-                        handleGridAction(gridX, gridY);
-                    } else if (mode === 'line') {
-                        isDrawingLine = true;
-                    } else if (mode === 'clone') {
-                        isCloning = true;
-                    } else if (mode === 'delete') {
-                        isDeleting = true;
-                    }
-                }
-            };
-
-            // Mouse move handler
-            canvas.onmousemove = (e) => {
-                const { gridX, gridY } = getGridCoords(e.clientX, e.clientY);
-                currentGridX = gridX;
-                currentGridY = gridY;
-
-                if (isDragging) {
-                    const dx = e.clientX - lastMouseX;
-                    const dy = e.clientY - lastMouseY;
-                    
-                    const effectiveTileSize = canvas.width / (GRID_SIZE * zoom);
-                    
-                    offsetX -= dx / effectiveTileSize;
-                    offsetY -= dy / effectiveTileSize;
-                    
-                    // Clamp offsets to keep the grid in view
-                    offsetX = Math.max(0, Math.min(GRID_SIZE - canvas.width / effectiveTileSize, offsetX));
-                    offsetY = Math.max(0, Math.min(GRID_SIZE - canvas.height / effectiveTileSize, offsetY));
-                    
-                    lastMouseX = e.clientX;
-                    lastMouseY = e.clientY;
-                }
-                
-                updateSelectionDisplay();
-                drawGrid(); // Redraw frequently on mouse move
-            };
-
-            // Mouse up handler
-            canvas.onmouseup = (e) => {
-                isDragging = false;
-                const { gridX, gridY } = getGridCoords(e.clientX, e.clientY);
-
-                if (e.button === 0) { // Left click release
-                    if (isDrawingLine) {
-                        handleLineAction(gridX, gridY);
-                    } else if (isCloning) {
-                        handleCloneAction(gridX, gridY);
-                    } else if (isDeleting) {
-                        handleDeleteAction(gridX, gridY);
-                    }
-                    resetInteractionState(); // Reset mode flags
-                }
-            };
-
-            // Mouse wheel for zoom
-            canvas.onwheel = (e) => {
-                e.preventDefault();
-                const zoomFactor = 1.1;
-                const oldZoom = zoom;
-                
-                if (e.deltaY < 0) {
-                    zoom *= zoomFactor;
-                } else {
-                    zoom /= zoomFactor;
-                }
-                
-                // Clamp zoom level
-                zoom = Math.max(0.2, Math.min(4.0, zoom));
-
-                // Recenter view based on mouse position
-                const rect = canvas.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
-
-                // Calculate grid coordinate under the mouse before zoom
-                const gridXBefore = mouseX / (canvas.width / (GRID_SIZE * oldZoom)) + offsetX;
-                const gridYBefore = mouseY / (canvas.height / (GRID_SIZE * oldZoom)) + offsetY;
-
-                // Calculate new offsets to keep the same grid coordinate under the mouse
-                const effectiveTileSize = canvas.width / (GRID_SIZE * zoom);
-                offsetX = gridXBefore - (mouseX / effectiveTileSize);
-                offsetY = gridYBefore - (mouseY / effectiveTileSize);
-
-                // Re-clamp offsets after zoom
-                offsetX = Math.max(0, Math.min(GRID_SIZE - canvas.width / effectiveTileSize, offsetX));
-                offsetY = Math.max(0, Math.min(GRID_SIZE - canvas.height / effectiveTileSize, offsetY));
-
-                drawGrid();
-            };
-
-            // Keyboard controls
-            document.onkeydown = (e) => {
-                const step = 5;
-                let moved = false;
-                
-                const effectiveTileSize = canvas.width / (GRID_SIZE * zoom);
-                const viewWidthInTiles = canvas.width / effectiveTileSize;
-                const viewHeightInTiles = canvas.height / effectiveTileSize;
-
-                switch (e.key.toLowerCase()) {
-                    case 'w': offsetY -= step; moved = true; break;
-                    case 's': offsetY += step; moved = true; break;
-                    case 'a': offsetX -= step; moved = true; break;
-                    case 'd': offsetX += step; moved = true; break;
-                    case 'r': // Rotate
-                        const currentItem = getCurrentItem();
-                        if (currentItem && currentItem.rotate) {
-                            rotation = (rotation + 1) % 4;
-                            drawGrid();
-                        }
-                        break;
-                    case 'h': // Toggle Help Modal
-                        document.getElementById('helpModal').classList.toggle('hidden');
-                        break;
-                    case '1': mode = 'click'; updateModeDisplay(); break;
-                    case '2': mode = 'line'; updateModeDisplay(); break;
-                    case '3': mode = 'clone'; updateModeDisplay(); break;
-                    case '4': mode = 'delete'; updateModeDisplay(); break;
-                }
-
-                if (moved) {
-                    // Clamp movement offsets
-                    offsetX = Math.max(0, Math.min(GRID_SIZE - viewWidthInTiles, offsetX));
-                    offsetY = Math.max(0, Math.min(GRID_SIZE - viewHeightInTiles, offsetY));
-                    drawGrid();
-                }
-            };
-
-            // Handle window resize
-            window.onresize = () => {
-                drawGrid();
-            };
-        }
-
-        // --- UI & Initialization ---
-
-        function updateSelectionDisplay() {
-            const item = getCurrentItem();
-            const modeName = mode.charAt(0).toUpperCase() + mode.slice(1);
-            const selectedName = item ? item.name : 'None';
-            
-            document.getElementById('coordinateDisplay').innerHTML = 
-                `X: ${currentGridX}, Y: ${currentGridY} | Mode: ${modeName} | Selected: ${selectedName}`;
-        }
-        
-        function updateModeDisplay() {
-            // In a real app, you'd update specific UI buttons here to show the active mode
-            console.log(`Mode changed to: ${mode}`);
-        }
-
-        function createItemButtons() {
-            const container = document.getElementById('itemButtons');
-            container.innerHTML = '';
-            
-            items.forEach(item => {
-                const button = document.createElement('button');
-                button.className = `item-button p-2 flex flex-col items-center justify-center text-sm rounded-lg shadow-md transition duration-150`;
-                button.style.backgroundColor = '#3a3a3a';
-                button.style.color = '#FFFFFF';
-                
-                // Create a small canvas for the item preview
-                const previewCanvas = document.createElement('canvas');
-                const previewSize = 48;
-                previewCanvas.width = previewSize;
-                previewCanvas.height = previewSize;
-                const pCtx = previewCanvas.getContext('2d');
-
-                // Draw the item preview
-                pCtx.fillStyle = '#1a1a1a';
-                pCtx.fillRect(0, 0, previewSize, previewSize);
-                item.draw(pCtx, 0, 0, previewSize, 0, false, item.color);
-                
-                const nameDiv = document.createElement('div');
-                nameDiv.textContent = item.name;
-                nameDiv.className = 'mt-1 text-xs text-gray-300 truncate';
-
-                button.appendChild(previewCanvas);
-                button.appendChild(nameDiv);
-
-                if (item.id === selectedItemId) {
-                    button.classList.add('selected');
-                }
-                
-                button.onclick = () => {
-                    selectedItemId = item.id;
-                    selectedItem = item;
-                    mode = 'click'; // Reset to click mode when selecting a new item
-                    document.querySelectorAll('.item-button').forEach(btn => btn.classList.remove('selected'));
-                    button.classList.add('selected');
-                    updateSelectionDisplay();
-                };
-                
-                container.appendChild(button);
-            });
-        }
-        
-        // Initial setup on window load
-        window.onload = function() {
-            // Center the view on the grid
-            offsetX = GRID_SIZE / 2 - canvas.clientWidth / TILE_SIZE / 2;
-            offsetY = GRID_SIZE / 2 - canvas.clientHeight / TILE_SIZE / 2;
-
-            selectedItem = getCurrentItem();
-            createItemButtons();
-            setupEventListeners();
-            drawGrid();
-            
-            // Show help modal on start
-            document.getElementById('helpModal').classList.remove('hidden');
-            
-            // Button handlers for mode change
-            document.getElementById('helpButton').onclick = () => {
-                document.getElementById('helpModal').classList.toggle('hidden');
-            };
-        };
-
-        // --- Firestore Data Operations ---
-
-        function getDocRef(docId = 'grid-data') {
-            if (!db || !userId) return null;
-            // Public collection path for collaborative projects
-            const collectionPath = `/artifacts/${appId}/public/data/editor-maps`;
-            return doc(db, collectionPath, docId);
-        }
-
-        // Set up real-time listener for grid data
-        function setupFirestoreListener() {
-            const docRef = getDocRef();
-            if (!docRef) return;
-            
-            onSnapshot(docRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    // Data is stored under the 'data' field
-                    const data = docSnap.data().data || {};
-                    // Deserialize complex objects if needed, but for this simple structure, direct assignment works
-                    gridData = data;
-                } else {
-                    gridData = {}; // Initialize empty if document doesn't exist
-                    console.log("No existing data found. Starting fresh.");
-                }
-                drawGrid();
-            }, (error) => {
-                console.error("Firestore listen error:", error);
-            });
-        }
-        
-        // Place a single object
-        async function placeObject(key, obj) {
-            if (!db || !userId) return;
-
-            const docRef = getDocRef();
-            if (!docRef) return;
-
-            try {
-                await runTransaction(db, async (transaction) => {
-                    const docSnap = await transaction.get(docRef);
-                    let currentData = docSnap.exists() ? docSnap.data().data || {} : {};
-
-                    // Perform the update
-                    const existing = currentData[key];
-                    if (existing && existing.id === obj.id) {
-                        // If clicking on the same object, delete it (toggle behavior)
-                        delete currentData[key];
-                    } else {
-                        // Place new object
-                        currentData[key] = obj;
-                    }
-
-                    transaction.set(docRef, { data: currentData, userId: userId }, { merge: true });
-                });
-            } catch (error) {
-                console.error("Transaction failed (placeObject):", error);
-            }
-        }
-        
-        // Place a batch of objects (used for line/clone)
-        async function placeBatch(batchData) {
-            if (!db || !userId) return;
-
-            const docRef = getDocRef();
-            if (!docRef) return;
-
-            try {
-                await runTransaction(db, async (transaction) => {
-                    const docSnap = await transaction.get(docRef);
-                    let currentData = docSnap.exists() ? docSnap.data().data || {} : {};
-
-                    // Merge batch data into current data
-                    Object.assign(currentData, batchData);
-
-                    transaction.set(docRef, { data: currentData, userId: userId }, { merge: true });
-                });
-            } catch (error) {
-                console.error("Transaction failed (placeBatch):", error);
-            }
-        }
-
-        // Delete a single object
-        async function deleteObject(key) {
-             if (!db || !userId) return;
-
-            const docRef = getDocRef();
-            if (!docRef) return;
-
-            try {
-                await runTransaction(db, async (transaction) => {
-                    const docSnap = await transaction.get(docRef);
-                    let currentData = docSnap.exists() ? docSnap.data().data || {} : {};
-
-                    // Delete the key
-                    delete currentData[key];
-
-                    // NOTE: Firestore doesn't allow deleting nested fields inside a map directly using dot notation in set/update if the parent doesn't exist or is a transaction.
-                    // The safest way is to update the entire map, or use a complex update if only deleting a few known fields. 
-                    // Since the map size is relatively small, updating the whole map is simpler in a transaction.
-                    transaction.set(docRef, { data: currentData, userId: userId }, { merge: true });
-                });
-            } catch (error) {
-                console.error("Transaction failed (deleteObject):", error);
-            }
-        }
-
-        // Delete a batch of objects
-        async function deleteBatch(keysToDelete) {
-            if (!db || !userId) return;
-
-            const docRef = getDocRef();
-            if (!docRef) return;
-
-            try {
-                await runTransaction(db, async (transaction) => {
-                    const docSnap = await transaction.get(docRef);
-                    let currentData = docSnap.exists() ? docSnap.data().data || {} : {};
-
-                    // Delete all keys in the batch
-                    keysToDelete.forEach(key => {
-                        delete currentData[key];
+            const ref = getUserRef();
+            if (ref) {
+                setDoc(ref, { data: JSON.stringify(gridData), timestamp: Date.now() })
+                    .then(() => {
+                        console.log("Base layout saved to Firestore.");
+                        showMessage("Base layout saved!", 1500);
+                    })
+                    .catch(error => {
+                        console.error("Error writing document: ", error);
+                        showMessage("Save failed: Check console for errors.", 2000);
                     });
-
-                    transaction.set(docRef, { data: currentData, userId: userId }, { merge: true });
-                });
-            } catch (error) {
-                console.error("Transaction failed (deleteBatch):", error);
+            } else {
+                showMessage("Cannot save: Firebase not fully initialized.", 2000);
             }
         }
+
+        function setupRealtimeListener() {
+            if (!isAuthReady || !db) {
+                // Attempt to load from local storage
+                try {
+                    const localData = localStorage.getItem('devastBaseData');
+                    if (localData) {
+                        gridData = JSON.parse(localData);
+                        showMessage("Loaded data from local storage.", 1500);
+                        draw();
+                    }
+                } catch (e) {
+                    console.error("Local Storage Load Error:", e);
+                }
+                return;
+            }
+            
+            const baseCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'bases');
+            // Listen to all bases (for collaboration/viewing other users)
+            const q = query(baseCollectionRef);
+            
+            onSnapshot(q, (snapshot) => {
+                let loaded = false;
+                snapshot.docChanges().forEach((change) => {
+                    const docId = change.doc.id;
+                    const data = change.doc.data();
+
+                    if (docId === userId) {
+                        // Load the current user's data
+                        if (data && data.data) {
+                            try {
+                                gridData = JSON.parse(data.data);
+                                draw();
+                                console.log("Current user's base loaded/updated.");
+                                loaded = true;
+                            } catch (e) {
+                                console.error("Failed to parse grid data:", e);
+                            }
+                        }
+                    }
+                    // For a full multiplayer view, you'd merge other users' data here.
+                });
+
+                if (!loaded) {
+                    draw(); // Redraw even if no data was found/updated for the current user
+                }
+            }, (error) => {
+                console.error("Firestore real-time error:", error);
+                showMessage("Real-time data failed to load. Check connection.", 3000);
+            });
+        }
+
+        // --- DRAWING FUNCTIONS ---
+
+        // NEW: Colors for the updated aesthetic
+        const GRID_BG_COLOR = '#2e352d'; // Dark forest green
+        const GRID_LINE_COLOR = '#4f5a4e'; // Lighter green/grey for visible lines
+
+        function drawGrid() {
+            // 1. Clear and set background
+            ctx.fillStyle = GRID_BG_COLOR; 
+            ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+            // 2. Draw grid lines
+            ctx.strokeStyle = GRID_LINE_COLOR; 
+            ctx.lineWidth = 1;
+
+            // Vertical lines
+            for (let x = 0; x <= GRID_SIZE; x++) {
+                const lineX = x * cellSize;
+                ctx.beginPath();
+                ctx.moveTo(lineX, 0);
+                ctx.lineTo(lineX, canvasSize);
+                ctx.stroke();
+            }
+
+            // Horizontal lines
+            for (let y = 0; y <= GRID_SIZE; y++) {
+                const lineY = y * cellSize;
+                ctx.beginPath();
+                ctx.moveTo(0, lineY);
+                ctx.lineTo(canvasSize, lineY);
+                ctx.stroke();
+            }
+        }
+
+        function getRotatedSize(type, rot) {
+            const size = OBJECTS[type].size;
+            if (rot === 90 || rot === 270) {
+                // Swap width and height for 90/270 degree rotation
+                return [size[1], size[0]];
+            }
+            return size;
+        }
+
+        function drawObjects() {
+            for (const key in gridData) {
+                const [x, y] = key.split(',').map(Number);
+                const obj = gridData[key];
+                const type = obj.type;
+                const rot = obj.rot || 0;
+                
+                if (!OBJECTS[type]) continue;
+                
+                const [w, h] = getRotatedSize(type, rot);
+
+                const width = w * cellSize;
+                const height = h * cellSize;
+                const halfCell = cellSize / 2;
+
+                // Draw the object block
+                ctx.fillStyle = OBJECTS[type].color;
+                ctx.fillRect(x * cellSize, y * cellSize, width, height);
+                
+                // Draw a simple pattern/icon for visibility
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x * cellSize + 2, y * cellSize + 2, width - 4, height - 4);
+                
+                // If it's a rotatable object (e.g., Door, Fridge), draw a directional arrow/mark
+                if (OBJECTS[type].rotatable && (rot === 90 || rot === 270)) {
+                    // Draw a centered cross-hatch for clarity on placement
+                    ctx.strokeStyle = '#FFFFFF';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x * cellSize + halfCell, y * cellSize);
+                    ctx.lineTo(x * cellSize + halfCell, y * cellSize + height);
+                    ctx.moveTo(x * cellSize, y * cellSize + height / 2);
+                    ctx.lineTo(x * cellSize + width, y * cellSize + height / 2);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function drawGhost(gridX, gridY) {
+            const objectDef = OBJECTS[selectedItem];
+            if (!objectDef) return;
+
+            const [w, h] = getRotatedSize(selectedItem, rotation);
+            
+            const width = w * cellSize;
+            const height = h * cellSize;
+
+            // Draw ghost outline
+            ctx.fillStyle = objectDef.ghost;
+            ctx.fillRect(gridX * cellSize, gridY * cellSize, width, height);
+
+            ctx.strokeStyle = objectDef.color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(gridX * cellSize, gridY * cellSize, width, height);
+            
+            // Draw rotation indicator
+            if (objectDef.rotatable) {
+                 ctx.fillStyle = '#FFFFFF';
+                 ctx.beginPath();
+                 // Triangle pointing in the direction of 'forward' (0 deg is up/right)
+                 if (rotation === 0 || rotation === 180) {
+                    ctx.moveTo(gridX * cellSize + width - 10, gridY * cellSize + 10);
+                    ctx.lineTo(gridX * cellSize + width - 10, gridY * cellSize + height - 10);
+                    ctx.lineTo(gridX * cellSize + width - 3, gridY * cellSize + height / 2);
+                 } else { // 90 or 270 degrees (swapped axes)
+                    ctx.moveTo(gridX * cellSize + 10, gridY * cellSize + height - 10);
+                    ctx.lineTo(gridX * cellSize + width - 10, gridY * cellSize + height - 10);
+                    ctx.lineTo(gridX * cellSize + width / 2, gridY * cellSize + height - 3);
+                 }
+                 ctx.closePath();
+                 ctx.fill();
+            }
+        }
+
+        function drawSelectionBox(x1, y1, x2, y2) {
+            const minX = Math.min(x1, x2) * cellSize;
+            const minY = Math.min(y1, y2) * cellSize;
+            const maxX = Math.max(x1, x2) * cellSize + cellSize;
+            const maxY = Math.max(y1, y2) * cellSize + cellSize;
+
+            const width = maxX - minX;
+            const height = maxY - minY;
+
+            ctx.save();
+            ctx.globalAlpha = 0.5;
+            if (placementMode === 'delete') {
+                ctx.fillStyle = 'red';
+                ctx.fillRect(minX, minY, width, height);
+            } else if (placementMode === 'clone') {
+                ctx.fillStyle = 'blue';
+                ctx.fillRect(minX, minY, width, height);
+            } else if (placementMode === 'line') {
+                ctx.fillStyle = OBJECTS[selectedItem].ghost;
+                ctx.fillRect(minX, minY, width, height);
+            }
+            ctx.globalAlpha = 1.0;
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(minX, minY, width, height);
+            ctx.restore();
+        }
+
+        function draw() {
+            // Update canvas dimensions based on current scale
+            canvasSize = GRID_SIZE * cellSize;
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+
+            // Apply camera transformation
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2); // Center the viewport
+            ctx.scale(scale, scale);
+            ctx.translate(offsetX, offsetY); // Apply pan
+            
+            // Draw core elements
+            drawGrid();
+            drawObjects();
+            
+            // Draw ghost or selection box if drawing is active
+            if (isDrawing && startGridX !== -1) {
+                if (placementMode === 'click') {
+                    drawGhost(currentGridX, currentGridY);
+                } else if (placementMode === 'line' || placementMode === 'delete' || placementMode === 'clone') {
+                    drawSelectionBox(startGridX, startGridY, currentGridX, currentGridY);
+                }
+            } else if (!isDrawing && placementMode === 'click' && currentGridX !== -1) {
+                drawGhost(currentGridX, currentGridY);
+            }
+
+            ctx.restore();
+            requestAnimationFrame(draw);
+        }
+
+        // --- INTERACTION HANDLERS ---
         
+        // Handle Mouse/Touch input
+        canvas.addEventListener('mousemove', handlePointerMove);
+        canvas.addEventListener('mousedown', handlePointerDown);
+        canvas.addEventListener('mouseup', handlePointerUp);
+        canvas.addEventListener('mouseleave', handlePointerLeave);
+        canvas.addEventListener('contextmenu', e => e.preventDefault()); // Disable right-click menu
+
+        // Panning state for middle mouse click
+        let lastPanX, lastPanY;
+
+        function handlePointerMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            
+            // 1. Panning with Middle Mouse Button (or touch drag)
+            if (middleMousePanning) {
+                const dx = e.clientX - lastPanX;
+                const dy = e.clientY - lastPanY;
+
+                // Adjust based on current scale
+                offsetX += dx / scale;
+                offsetY += dy / scale;
+
+                lastPanX = e.clientX;
+                lastPanY = e.clientY;
+                return;
+            }
+
+            // 2. Interaction (Drawing/Ghost Preview)
+            const { gridX, gridY } = getGridCoordinates(e.clientX, e.clientY);
+            currentGridX = gridX;
+            currentGridY = gridY;
+
+            if (isDrawing && placementMode === 'line') {
+                // For line mode, restrict movement to straight lines from start point
+                const dx = Math.abs(currentGridX - startGridX);
+                const dy = Math.abs(currentGridY - startGridY);
+
+                if (dx > dy) {
+                    currentGridY = startGridY; // Lock to horizontal
+                } else {
+                    currentGridX = startGridX; // Lock to vertical
+                }
+            }
+        }
+
+        function handlePointerDown(e) {
+            e.preventDefault();
+            
+            const { gridX, gridY } = getGridCoordinates(e.clientX, e.clientY);
+            startGridX = gridX;
+            startGridY = gridY;
+            currentGridX = gridX;
+            currentGridY = gridY;
+            isDrawing = true;
+
+            // Middle Mouse Button (Button 1) for Panning
+            if (e.button === 1) { 
+                middleMousePanning = true;
+                lastPanX = e.clientX;
+                lastPanY = e.clientY;
+                return;
+            }
+
+            // Left Click (Button 0) for placing/deleting/drawing
+            if (e.button === 0) {
+                if (placementMode === 'click') {
+                    handlePlacement(gridX, gridY);
+                    isDrawing = false; // Single click mode
+                }
+            }
+        }
+
+        function handlePointerUp(e) {
+            e.preventDefault();
+
+            // Stop Panning
+            if (e.button === 1) {
+                middleMousePanning = false;
+                return;
+            }
+
+            // Stop Drawing/Selection
+            if (isDrawing && e.button === 0) {
+                if (placementMode === 'line' || placementMode === 'clone' || placementMode === 'delete') {
+                    const { gridX: endX, gridY: endY } = getGridCoordinates(e.clientX, e.clientY);
+                    handleAreaAction(startGridX, startGridY, endX, endY, placementMode);
+                }
+            }
+
+            isDrawing = false;
+            startGridX = -1;
+            startGridY = -1;
+        }
+
+        function handlePointerLeave() {
+            isDrawing = false;
+            startGridX = -1;
+            startGridY = -1;
+            currentGridX = -1;
+            currentGridY = -1;
+            middleMousePanning = false;
+        }
+
+        // Handle Zoom
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = 1.1; // Amount to zoom by
+            const oldScale = scale;
+
+            if (e.deltaY < 0) {
+                scale *= zoomFactor; // Zoom in
+            } else {
+                scale /= zoomFactor; // Zoom out
+            }
+
+            // Clamp scale to reasonable limits
+            scale = Math.min(Math.max(0.1, scale), 5.0);
+
+            // Re-center zoom effect (optional but nice for UX)
+            // This adjustment ensures the mouse cursor position stays over the same world point
+            // For simplicity in this editor, we'll skip the complex re-centering calculation, 
+            // but keep the basic functionality.
+            
+            // Recalculate cell size based on new scale (not strictly necessary but can be used for LOD)
+            // cellSize = Math.max(MIN_CELL_PIXELS, INITIAL_CELL_SIZE * scale);
+
+            draw(); // Redraw immediately
+        });
+        
+        // Handle WASD Panning
+        document.addEventListener('keydown', (e) => {
+            const panSpeed = 100 / scale; // Pan distance relative to zoom
+            let moved = false;
+
+            switch (e.key) {
+                case 'w':
+                case 'W':
+                case 'ArrowUp':
+                    offsetY += panSpeed;
+                    moved = true;
+                    break;
+                case 'a':
+                case 'A':
+                case 'ArrowLeft':
+                    offsetX += panSpeed;
+                    moved = true;
+                    break;
+                case 's':
+                case 'S':
+                case 'ArrowDown':
+                    offsetY -= panSpeed;
+                    moved = true;
+                    break;
+                case 'd':
+                case 'D':
+                case 'ArrowRight':
+                    offsetX -= panSpeed;
+                    moved = true;
+                    break;
+                case 'r':
+                case 'R':
+                    if (OBJECTS[selectedItem]?.rotatable) {
+                        rotation = (rotation + 90) % 360;
+                        showMessage(`Rotation: ${rotation}°`, 1000);
+                        moved = true; // Redraw for ghost update
+                    }
+                    break;
+                case 'h':
+                case 'H':
+                    helpModal.classList.toggle('hidden');
+                    break;
+            }
+
+            if (moved) draw();
+        });
+
+
+        // --- PLACEMENT LOGIC ---
+
+        function handlePlacement(x, y) {
+            const key = `${x},${y}`;
+            const objectDef = OBJECTS[selectedItem];
+            const [w, h] = getRotatedSize(selectedItem, rotation);
+
+            // Check if coordinates are within bounds (0 to GRID_SIZE-1)
+            if (x < 0 || y < 0 || x + w > GRID_SIZE || y + h > GRID_SIZE) {
+                showMessage("Placement out of grid bounds!", 1500);
+                return;
+            }
+
+            // Check for overlap with existing objects
+            let overlap = false;
+            for (let i = 0; i < w; i++) {
+                for (let j = 0; j < h; j++) {
+                    const checkKey = `${x + i},${y + j}`;
+                    if (gridData[checkKey]) {
+                        overlap = true;
+                        break;
+                    }
+                }
+                if (overlap) break;
+            }
+
+            if (placementMode === 'click') {
+                if (gridData[key] && gridData[key].type === selectedItem) {
+                    // Remove if clicking on the same object
+                    delete gridData[key];
+                    showMessage(`Removed ${selectedItem}`, 800);
+                } else if (!overlap) {
+                    // Place the new object
+                    gridData[key] = { type: selectedItem, rot: rotation };
+                    showMessage(`Placed ${selectedItem}`, 800);
+                } else if (overlap) {
+                    // Simple removal logic if overlap is detected on a single click
+                    delete gridData[key];
+                    showMessage(`Removed existing object at ${x},${y}`, 800);
+                }
+            } 
+            
+            saveGrid();
+            draw();
+        }
+
+        function handleAreaAction(x1, y1, x2, y2, mode) {
+            const minX = Math.min(x1, x2);
+            const minY = Math.min(y1, y2);
+            const maxX = Math.max(x1, x2);
+            const maxY = Math.max(y1, y2);
+            let count = 0;
+            let objectsToClone = {};
+
+            // 1. Line Placement (Place one object at every cell in the area)
+            if (mode === 'line') {
+                const [w, h] = getRotatedSize(selectedItem, rotation);
+
+                for (let x = minX; x <= maxX; x++) {
+                    for (let y = minY; y <= maxY; y++) {
+                        // Only place if it fits within the bounds and doesn't overlap existing objects
+                        const key = `${x},${y}`;
+                        if (x + w <= GRID_SIZE && y + h <= GRID_SIZE && !gridData[key]) {
+                             // Simple overlap check: check if any cell this object would occupy is already taken
+                            let isOccupied = false;
+                            for (let i = 0; i < w; i++) {
+                                for (let j = 0; j < h; j++) {
+                                    if (gridData[`${x + i},${y + j}`]) {
+                                        isOccupied = true;
+                                        break;
+                                    }
+                                }
+                                if (isOccupied) break;
+                            }
+
+                            if (!isOccupied) {
+                                gridData[key] = { type: selectedItem, rot: rotation };
+                                count++;
+                            }
+                        }
+                    }
+                }
+                showMessage(`Placed ${count} ${selectedItem}(s).`, 1500);
+            } 
+            
+            // 2. Delete Mode (Remove all objects in the area)
+            else if (mode === 'delete') {
+                const keysToDelete = [];
+                for (const key in gridData) {
+                    const [x, y] = key.split(',').map(Number);
+                    if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+                        keysToDelete.push(key);
+                        count++;
+                    }
+                }
+                keysToDelete.forEach(key => delete gridData[key]);
+                showMessage(`Deleted ${count} object(s).`, 1500);
+            } 
+            
+            // 3. Clone Mode (Select area, then next click will place clone)
+            else if (mode === 'clone') {
+                // First click/drag defines the source area
+                if (!window.cloneSource) {
+                    window.cloneSource = { minX, minY, maxX, maxY, objects: {} };
+                    for (const key in gridData) {
+                        const [x, y] = key.split(',').map(Number);
+                        if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+                            const relativeX = x - minX;
+                            const relativeY = y - minY;
+                            window.cloneSource.objects[`${relativeX},${relativeY}`] = gridData[key];
+                            count++;
+                        }
+                    }
+                    if (count > 0) {
+                        showMessage(`Selected ${count} object(s) for cloning. Click an empty spot to place!`, 3000);
+                    } else {
+                        showMessage("No objects selected. Try again.", 1500);
+                        window.cloneSource = null;
+                    }
+                    setMode('click'); // Switch to click mode for placement
+                } 
+                // Second click defines the destination (handled by click mode) - Not fully implemented in one drag for simplicity
+            }
+
+            saveGrid();
+            draw();
+        }
+
+        function clearAll() {
+            // Use a confirmation modal instead of alert
+            helpModal.classList.add('hidden'); // Ensure help modal is closed
+            document.getElementById('messageBox').innerHTML = `
+                <div class="p-4 bg-red-800 rounded-lg shadow-xl">
+                    <p class="font-bold mb-2">Are you sure you want to clear the entire map?</p>
+                    <button id="confirmClear" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded mr-2">Yes, Clear</button>
+                    <button id="cancelClear" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded">Cancel</button>
+                </div>
+            `;
+            document.getElementById('messageBox').classList.remove('opacity-0', 'pointer-events-none');
+            document.getElementById('messageBox').classList.add('opacity-100');
+
+            document.getElementById('confirmClear').onclick = () => {
+                gridData = {};
+                saveGrid();
+                document.getElementById('messageBox').classList.remove('opacity-100');
+                document.getElementById('messageBox').classList.add('opacity-0', 'pointer-events-none');
+                showMessage("Map cleared!", 1500);
+            };
+            document.getElementById('cancelClear').onclick = () => {
+                document.getElementById('messageBox').classList.remove('opacity-100');
+                document.getElementById('messageBox').classList.add('opacity-0', 'pointer-events-none');
+            };
+        }
+
+
+        // --- UI BINDINGS ---
+        
+        function setMode(mode) {
+            placementMode = mode;
+            document.querySelectorAll('.mode-item').forEach(btn => {
+                btn.classList.remove('bg-green-600', 'bg-red-600', 'bg-blue-600', 'bg-yellow-600');
+                btn.classList.add('bg-gray-600');
+                if (btn.dataset.mode === mode) {
+                    btn.classList.remove('bg-gray-600');
+                    if (mode === 'click') btn.classList.add('bg-green-600');
+                    else if (mode === 'delete') btn.classList.add('bg-red-600');
+                    else if (mode === 'clone') btn.classList.add('bg-blue-600');
+                    else btn.classList.add('bg-yellow-600'); // For line
+                }
+            });
+            showMessage(`Mode set to: ${mode.charAt(0).toUpperCase() + mode.slice(1)}`, 1000);
+        }
+
+        function setItem(item) {
+            selectedItem = item;
+            document.querySelectorAll('.toolbar-item').forEach(btn => {
+                btn.classList.remove('bg-indigo-600');
+                btn.classList.add('bg-gray-600');
+                if (btn.dataset.item === item) {
+                    btn.classList.remove('bg-gray-600');
+                    btn.classList.add('bg-indigo-600');
+                }
+            });
+            rotation = 0; // Reset rotation when item changes
+            showMessage(`Selected Item: ${item}`, 1000);
+        }
+
+        // Toolbar Button Event Listeners
+        toolbar.addEventListener('click', (e) => {
+            const itemBtn = e.target.closest('.toolbar-item');
+            const modeBtn = e.target.closest('.mode-item');
+
+            if (itemBtn) setItem(itemBtn.dataset.item);
+            if (modeBtn) setMode(modeBtn.dataset.mode);
+        });
+
+        clearBtn.addEventListener('click', clearAll);
+        helpBtn.addEventListener('click', () => helpModal.classList.remove('hidden'));
+        helpModal.addEventListener('click', (e) => {
+            // Close modal if clicking outside the content box
+            if (e.target.id === 'helpModal') {
+                helpModal.classList.add('hidden');
+            }
+        });
+
+        // Initialize display and start the game loop
+        window.onload = function() {
+            // Set initial state
+            setItem(selectedItem);
+            setMode(placementMode);
+
+            // Calculate initial camera position to center the grid
+            cellSize = canvas.clientWidth / (GRID_SIZE * scale); // Initial guess
+            cellSize = 40; // Default logical cell size for initial drawing
+            scale = 0.5; // Default initial scale
+
+            // Recenter based on the logical canvas size
+            canvasSize = GRID_SIZE * cellSize;
+            offsetX = -canvasSize / 2;
+            offsetY = -canvasSize / 2;
+
+            draw(); // Start the animation loop
+        };
     </script>
+    <!-- Hidden element to display user ID (for security rule context) -->
+    <div id="userIdDisplay" class="fixed bottom-0 right-0 p-1 text-xs text-gray-600 z-10"></div>
 </body>
 </html>
