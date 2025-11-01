@@ -192,13 +192,11 @@
         const BLOCKS = {
             FLOOR: ['FLOOR', 1, 1, null],
             WALL: ['WALL', 1, 1, null],
-            DOOR: ['DOOR', 1, 2, null], // Note: The door may use a 1x2 or 1x1 image, but occupies 1x2 space
-            BENCH: ['BENCH', 1, 2, 'assets/day-workbench.png'], 
-            RESEARCH: ['RESEARCH', 1, 2, 'assets/day-workbench2.png'], 
+            DOOR: ['DOOR', 1, 2, null], 
+            BENCH: ['BENCH', 3, 1, null], // 3x1 blue rectangle
+            RESEARCH: ['RESEARCH', 3, 1, null], // 3x1 brown rectangle
             // Add more blocks here
         };
-        
-        const IMAGE_CACHE = {}; // Cache to store loaded Image objects
         
         // --- Global State ---
         let scale = 1.0;
@@ -245,36 +243,6 @@
         const blockCountDisplay = document.getElementById('block-count');
 
         // --- Utility Functions ---
-
-        /**
-         * Loads all image assets defined in BLOCKS.
-         * @returns {Promise<void>} A promise that resolves when all images are loaded.
-         */
-        function loadImages() {
-            const imagePromises = [];
-            for (const key in BLOCKS) {
-                const block = BLOCKS[key];
-                const imagePath = block[3];
-                if (imagePath) {
-                    const img = new Image();
-                    const promise = new Promise((resolve, reject) => {
-                        img.onload = () => {
-                            IMAGE_CACHE[key] = img;
-                            resolve();
-                        };
-                        img.onerror = () => {
-                            console.error(`Failed to load image: ${imagePath}`);
-                            // Still resolve to allow the editor to load, just without the image
-                            IMAGE_CACHE[key] = null; 
-                            resolve();
-                        };
-                    });
-                    img.src = imagePath;
-                    imagePromises.push(promise);
-                }
-            }
-            return Promise.all(imagePromises);
-        }
 
         /**
          * Converts canvas pixel coordinates to grid coordinates.
@@ -365,7 +333,6 @@
             if (!blockDef) return;
 
             let [_, initialWidth, initialHeight, imagePath] = blockDef;
-            const image = IMAGE_CACHE[blockKey];
             
             // Determine the actual canvas dimensions in pixels (size after rotation)
             let drawWidth = initialWidth * CELL_PIXELS;
@@ -399,35 +366,27 @@
             if (isInvalid) {
                 ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
                 ctx.fillRect(-drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-                ctx.globalAlpha = 1.0; // Reset alpha for drawing the block image/color on top
+                ctx.globalAlpha = 1.0; // Reset alpha for drawing the block color on top
             }
             
-            // Draw the block (Image or solid color)
-            if (image) {
-                // If rotated 90/270 degrees, swap width and height for drawing context
-                if (rotation === 90 || rotation === 270) {
-                     // Since we are at the center and have rotated the context,
-                     // we draw the image at the original dimensions relative to the new center.
-                    ctx.drawImage(image, -initialWidth * CELL_PIXELS / 2, -initialHeight * CELL_PIXELS / 2, initialWidth * CELL_PIXELS, initialHeight * CELL_PIXELS);
-                } else {
-                    ctx.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-                }
+            // Draw the block (solid color only)
+            if (blockKey === 'FLOOR') {
+                ctx.fillStyle = '#606060'; // Dark gray for floor
+            } else if (blockKey === 'WALL') {
+                ctx.fillStyle = '#303030'; // Very dark gray for wall
+            } else if (blockKey === 'DOOR') {
+                ctx.fillStyle = '#cc8400'; // Brown/Orange for door
+            } else if (blockKey === 'BENCH') {
+                ctx.fillStyle = '#3b82f6'; // Blue-500 for BENCH (blue rectangle)
+            } else if (blockKey === 'RESEARCH') {
+                ctx.fillStyle = '#8b5e32'; // Brown for RESEARCH (brown rectangle)
             } else {
-                // Draw a colored square for blocks without images (e.g., FLOOR, WALL)
-                if (blockKey === 'FLOOR') {
-                    ctx.fillStyle = '#606060'; // Dark gray for floor
-                } else if (blockKey === 'WALL') {
-                    ctx.fillStyle = '#303030'; // Very dark gray for wall
-                } else if (blockKey === 'DOOR') {
-                    ctx.fillStyle = '#cc8400'; // Brown for door
-                } else {
-                    ctx.fillStyle = '#f0f0f0';
-                }
-                
-                // Draw the rectangle from the center point
-                ctx.fillRect(-drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+                ctx.fillStyle = '#f0f0f0'; // Default fallback
             }
             
+            // Draw the rectangle from the center point
+            ctx.fillRect(-drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+
             // Restore canvas state
             ctx.restore();
         }
@@ -585,21 +544,6 @@
                 const blockWidth = existingDef[1];
                 const blockHeight = existingDef[2];
 
-                // Find the top-left corner of the block being deleted (simple, not fully robust)
-                // For simplicity here, we assume single-cell click attempts to delete the block there.
-                
-                // Find top-left corner of the multi-cell block
-                let startX = gridX;
-                let startY = gridY;
-
-                // Simple check: assume the cell clicked is the top-left of a block OR part of a 1x1 block
-                // A better approach is to store the top-left coords on placement.
-                // For now, let's just delete the block at the clicked cell, which works for 1x1.
-                // For multi-cell blocks, we clear the whole area occupied by the original block.
-                
-                // Since we don't store the full bounds, we'll implement a simple clearance for 1x1 only
-                // If a user clicks on a cell and its a multi-cell block, this only clears the cell.
-                
                 // OPTIMIZATION: To ensure the whole block is deleted, we need to find the TOP-LEFT
                 // for simplicity in this demo, let's just clear the cell being clicked.
                 
@@ -1217,8 +1161,7 @@
             canvas.width = canvas.parentElement.clientWidth;
             canvas.height = canvas.parentElement.clientHeight;
 
-            // Load images and wait for them before first draw
-            await loadImages(); 
+            // Image loading removed. Proceed directly.
 
             // Initialize mode and block
             populateBlockSelector();
