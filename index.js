@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Devast Base Editor (H for Help)</title>
-    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom CSS for Game/App Styling */
@@ -100,23 +99,23 @@
 
         // Configuration for different object types
         const OBJECT_CONFIGS = {
-            'research': { name: 'Research (3x1 Blue)', color: '#4C60F5', length: 3, widthRatio: 2/3, shapeType: 'rectangle' },
-            'smelter': { name: 'Smelter (3x1 Red)', color: '#E32636', length: 3, widthRatio: 2/3, shapeType: 'rectangle' },
-            'tesla': { name: 'Tesla (3x1 Green)', color: '#00AA00', length: 3, widthRatio: 2/3, shapeType: 'rectangle' },
+            'research': { name: 'Research (3x1 Blue)', color: '#4C60F5', length: 3, widthRatio: 2/3, shapeType: 'rectangle', image: './assets/day-workbench2.png' },
+            'smelter': { name: 'Smelter (3x1 Red)', color: '#E32636', length: 3, widthRatio: 2/3, shapeType: 'rectangle', image: './assets/smelter.png' },
+            'tesla': { name: 'Tesla (3x1 Green)', color: '#00AA00', length: 3, widthRatio: 2/3, shapeType: 'rectangle', image: './assets/tesla.png' },
             // Adjusted color for Fridge for better visual contrast
-            'fridge': { name: 'Fridge (1x1 Half Gray)', color: '#C0C0C0', length: 1, widthRatio: 1, shapeType: 'half-square' }, 
+            'fridge': { name: 'Fridge (1x1 Half Gray)', color: '#C0C0C0', length: 1, widthRatio: 1, shapeType: 'half-square', image: './assets/fridge.png' }, 
             
-            'workbench': { name: 'Workbench (1x1 Brown Circle)', color: '#A0522D', length: 1, widthRatio: 1, shapeType: 'circle' },
-            'firepit': { name: 'Firepit (1x1 Yellow Circle)', color: '#FFD700', length: 1, widthRatio: 1, shapeType: 'circle' },
+            'workbench': { name: 'Workbench (1x1 Brown Circle)', color: '#A0522D', length: 1, widthRatio: 1, shapeType: 'circle', image: './assets/day-workbench.png' },
+            'firepit': { name: 'Firepit (1x1 Yellow Circle)', color: '#FFD700', length: 1, widthRatio: 1, shapeType: 'circle', image: './assets/firepit.png' },
             // NEW BLOCKS
-            'feeder': { name: 'Feeder (1x1 Blue Circle)', color: '#3b82f6', length: 1, widthRatio: 1, shapeType: 'circle' },
-            'weaving': { name: 'Weaving (1x1 Tan Circle)', color: '#d97706', length: 1, widthRatio: 1, shapeType: 'circle' },
-            'bag': { name: 'Bag (1x1 Tan Oval)', color: '#d97706', length: 1, widthRatio: 1, shapeType: 'oval' },
+            'feeder': { name: 'Feeder (1x1 Blue Circle)', color: '#3b82f6', length: 1, widthRatio: 1, shapeType: 'circle', image: './assets/feeder.png' },
+            'weaving': { name: 'Weaving (1x1 Tan Circle)', color: '#d97706', length: 1, widthRatio: 1, shapeType: 'circle', image: './assets/weaving.png' },
+            'bag': { name: 'Bag (1x1 Tan Oval)', color: '#d97706', length: 1, widthRatio: 1, shapeType: 'oval', image: './assets/bag.png' },
             
-            'metal_wall': { name: 'Metal Wall (1x1 White)', color: '#FFFFFF', length: 1, widthRatio: 1, shapeType: 'square' },
-            'metal_door': { name: 'Metal Door (1x1 Gray, Red Hinge)', color: '#808080', length: 1, widthRatio: 1, shapeType: 'square' },
-            'tiled_floor': { name: 'Tiled Floor (1x1 White Plus)', color: '#505050', length: 1, widthRatio: 1, shapeType: 'square' },
-            'unknown': { name: 'Unknown Block', color: '#000000', length: 1, widthRatio: 1, shapeType: 'square' } 
+            'metal_wall': { name: 'Metal Wall (1x1 White)', color: '#FFFFFF', length: 1, widthRatio: 1, shapeType: 'square', image: './assets/metal_wall.png' },
+            'metal_door': { name: 'Metal Door (1x1 Gray, Red Hinge)', color: '#808080', length: 1, widthRatio: 1, shapeType: 'square', image: './assets/metal_door.png' },
+            'tiled_floor': { name: 'Tiled Floor (1x1 White Plus)', color: '#505050', length: 1, widthRatio: 1, shapeType: 'square', image: './assets/tiled_floor.png' },
+            'unknown': { name: 'Unknown Block', color: '#000000', length: 1, widthRatio: 1, shapeType: 'square', image: null } 
         };
 
         // Known IDs for code output
@@ -136,6 +135,39 @@
         for (const type in KNOWN_INTEGER_IDS) {
             ID_TO_TYPE[KNOWN_INTEGER_IDS[type]] = type;
         }
+        
+        // --- Image Loading ---
+        const IMAGE_CACHE = {};
+
+        /**
+         * Preloads all images defined in OBJECT_CONFIGS.
+         * Returns a Promise that resolves when all images are loaded.
+         */
+        function loadImages() {
+            const imagesToLoad = [];
+            for (const key in OBJECT_CONFIGS) {
+                const config = OBJECT_CONFIGS[key];
+                if (config.image) {
+                    imagesToLoad.push(new Promise((resolve, reject) => {
+                        const img = new Image();
+                        // This prevents potential image-related CORS errors if running locally in certain environments
+                        img.crossOrigin = 'anonymous'; 
+                        img.onload = () => {
+                            IMAGE_CACHE[key] = img;
+                            resolve();
+                        };
+                        img.onerror = () => {
+                            console.warn(`Failed to load image for ${key}: ${config.image}. Falling back to shape drawing.`);
+                            // Still resolve so the app can start
+                            resolve(); 
+                        };
+                        img.src = config.image;
+                    }));
+                }
+            }
+            return Promise.all(imagesToLoad);
+        }
+
 
         // --- Global State ---
         let scale = 1.0;
@@ -250,133 +282,152 @@
                 ctx.rotate(obj.rotation * Math.PI / 180);
             }
 
-
             const S = originalCellSize;
             const halfS = S / 2;
 
-            if (config.shapeType === 'rectangle') {
-                // --- 3x1 Feature Drawing (Rectangle) ---
+            // --- NEW IMAGE DRAWING LOGIC ---
+            const img = IMAGE_CACHE[obj.type];
+            if (img) {
+                // If we have a loaded image, draw it centered, filling the cell size (S x S)
+                ctx.drawImage(img, -halfS, -halfS, S, S); 
                 
-                const totalLengthPixels = S * config.length; 
-                const totalWidthPixels = S * config.widthRatio; 
-
-                const drawXLength = totalWidthPixels; 
-                const drawYLength = totalLengthPixels; 
-
-                const featureDrawX = -drawXLength / 2; 
-                const featureDrawY = -drawYLength / 2; 
-                
-                ctx.fillStyle = config.color;
-                ctx.fillRect(featureDrawX, featureDrawY, drawXLength, drawYLength);
-
-                ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
-                ctx.lineWidth = 2 / scale;
-                ctx.strokeRect(featureDrawX, featureDrawY, drawXLength, drawYLength);
-
-                // Internal Details 
-                if (scale > 0.5) {
-                    const detailSize = S * 0.4;
-                    const detailHalf = detailSize / 2;
-                    
-                    if (obj.type === 'research') {
-                        ctx.fillStyle = '#E32636'; // Red
-                        ctx.fillRect(-detailHalf, -detailHalf, detailSize, detailSize);
-                    } else if (obj.type === 'smelter' || obj.type === 'tesla') { 
-                        ctx.fillStyle = '#1e90ff'; // Blue
-                        ctx.fillRect(-detailHalf, -detailHalf, detailSize, detailSize);
-                    }
+                // Draw a clear boundary for ghosting/floor visualization
+                if (isGhost) {
+                    ctx.strokeStyle = '#FFFFFF';
+                    ctx.lineWidth = 4 / scale;
+                    ctx.strokeRect(-halfS, -halfS, S, S);
+                } else if (obj.type === 'tiled_floor') {
+                    // Draw a subtle border for floor tiles
+                    ctx.strokeStyle = '#444444'; 
+                    ctx.lineWidth = 1 / scale;
+                    ctx.strokeRect(-halfS, -halfS, S, S);
                 }
-            } 
-            // --- 1x1 Feature Drawing (Circles/Ovals/Squares) ---
-            else { 
-                
-                // --- CIRCLE/OVAL SHAPES ---
-                if (config.shapeType === 'circle' || config.shapeType === 'oval') {
+            } else {
+                // --- FALLBACK SHAPE DRAWING LOGIC (The original implementation) ---
+                if (config.shapeType === 'rectangle') {
+                    // --- 3x1 Feature Drawing (Rectangle) ---
                     
-                    const radius = halfS * 0.9; 
-                    let radiusX = radius;
-                    let radiusY = radius;
-                    
-                    // Specific dimensions for Oval (Bag)
-                    if (config.shapeType === 'oval') {
-                        radiusX = halfS * 0.8; 
-                        radiusY = halfS * 0.45;
-                    }
+                    const totalLengthPixels = S * config.length; 
+                    const totalWidthPixels = S * config.widthRatio; 
+
+                    const drawXLength = totalWidthPixels; 
+                    const drawYLength = totalLengthPixels; 
+
+                    const featureDrawX = -drawXLength / 2; 
+                    const featureDrawY = -drawYLength / 2; 
                     
                     ctx.fillStyle = config.color;
-                    ctx.beginPath();
-                    
-                    if (config.shapeType === 'circle') {
-                        ctx.arc(0, 0, radius, 0, 2 * Math.PI); 
-                    } else { // oval
-                         ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, 2 * Math.PI);
-                    }
-                    
-                    ctx.fill();
+                    ctx.fillRect(featureDrawX, featureDrawY, drawXLength, drawYLength);
 
                     ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
                     ctx.lineWidth = 2 / scale;
-                    ctx.beginPath();
-                    
-                    if (config.shapeType === 'circle') {
-                        ctx.arc(0, 0, radius, 0, 2 * Math.PI); 
-                    } else { // oval
-                         ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, 2 * Math.PI);
-                    }
-                    ctx.stroke();
+                    ctx.strokeRect(featureDrawX, featureDrawY, drawXLength, drawYLength);
 
-                }
-                
-                // --- FRIDGE (Half Block - Special Case) ---
-                else if (obj.type === 'fridge' && config.shapeType === 'half-square') {
-                    // Draw the shape starting from the center of the cell and extending to the 'left' half 
-                    // This area [-halfS, 0] along the local X-axis rotates with the context.
-                    ctx.fillStyle = config.color;
-                    ctx.fillRect(-halfS, -halfS, halfS, S); 
-
-                    ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
-                    ctx.lineWidth = 2 / scale;
-                    ctx.strokeRect(-halfS, -halfS, S, S); // Stroke the full cell boundary
-                }
-
-                // --- TILED FLOOR ---
-                else if (obj.type === 'tiled_floor') {
-                    ctx.fillStyle = config.color;
-                    ctx.fillRect(-halfS, -halfS, S, S); 
-                    
+                    // Internal Details 
                     if (scale > 0.5) {
-                        drawTiledFloorDetail(S, isGhost);
+                        const detailSize = S * 0.4;
+                        const detailHalf = detailSize / 2;
+                        
+                        if (obj.type === 'research') {
+                            ctx.fillStyle = '#E32636'; // Red
+                            ctx.fillRect(-detailHalf, -detailHalf, detailSize, detailSize);
+                        } else if (obj.type === 'smelter' || obj.type === 'tesla') { 
+                            ctx.fillStyle = '#1e90ff'; // Blue
+                            ctx.fillRect(-detailHalf, -detailHalf, detailSize, detailSize);
+                        }
                     }
-
-                    ctx.strokeStyle = isGhost ? '#AAAAAA' : '#444444'; 
-                    ctx.lineWidth = 2 / scale;
-                    ctx.strokeRect(-halfS, -halfS, S, S);
-                }
-                
-                // --- SQUARE BLOCKS (Wall, Door, Unknown) ---
+                } 
+                // --- 1x1 Feature Drawing (Circles/Ovals/Squares) ---
                 else { 
-                    ctx.fillStyle = config.color;
-                    ctx.fillRect(-halfS, -halfS, S, S); 
+                    
+                    // --- CIRCLE/OVAL SHAPES ---
+                    if (config.shapeType === 'circle' || config.shapeType === 'oval') {
+                        
+                        const radius = halfS * 0.9; 
+                        let radiusX = radius;
+                        let radiusY = radius;
+                        
+                        // Specific dimensions for Oval (Bag)
+                        if (config.shapeType === 'oval') {
+                            radiusX = halfS * 0.8; 
+                            radiusY = halfS * 0.45;
+                        }
+                        
+                        ctx.fillStyle = config.color;
+                        ctx.beginPath();
+                        
+                        if (config.shapeType === 'circle') {
+                            ctx.arc(0, 0, radius, 0, 2 * Math.PI); 
+                        } else { // oval
+                            ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                        }
+                        
+                        ctx.fill();
 
-                    if (obj.type === 'metal_door' && scale > 0.5) {
-                        // Draw red hinge detail.
-                        // Defined at the bottom-left corner of the cell (relative to the rotated context).
-                        const detailSize = S * 0.3; 
-                        const detailX = -halfS; // Left edge
-                        const detailY = halfS - detailSize; // Bottom edge
-                        // Used a brighter color to ensure rotation visibility
-                        ctx.fillStyle = '#FF4500'; 
-                        ctx.fillRect(detailX, detailY, detailSize, detailSize); 
+                        ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
+                        ctx.lineWidth = 2 / scale;
+                        ctx.beginPath();
+                        
+                        if (config.shapeType === 'circle') {
+                            ctx.arc(0, 0, radius, 0, 2 * Math.PI); 
+                        } else { // oval
+                            ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                        }
+                        ctx.stroke();
+
+                    }
+                    
+                    // --- FRIDGE (Half Block - Special Case) ---
+                    else if (obj.type === 'fridge' && config.shapeType === 'half-square') {
+                        // Draw the shape starting from the center of the cell and extending to the 'left' half 
+                        // This area [-halfS, 0] along the local X-axis rotates with the context.
+                        ctx.fillStyle = config.color;
+                        ctx.fillRect(-halfS, -halfS, halfS, S); 
+
+                        ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
+                        ctx.lineWidth = 2 / scale;
+                        ctx.strokeRect(-halfS, -halfS, S, S); // Stroke the full cell boundary
                     }
 
-                    ctx.strokeStyle = isGhost ? '#AAAAAA' : (obj.type === 'metal_wall' ? '#333333' : '#444444'); 
-                    
-                    if (obj.type === 'unknown') {
-                         ctx.strokeStyle = isGhost ? 'rgba(255, 0, 0, 0.5)' : '#FF0000'; // Red outline for unknown blocks
+                    // --- TILED FLOOR ---
+                    else if (obj.type === 'tiled_floor') {
+                        ctx.fillStyle = config.color;
+                        ctx.fillRect(-halfS, -halfS, S, S); 
+                        
+                        if (scale > 0.5) {
+                            drawTiledFloorDetail(S, isGhost);
+                        }
+
+                        ctx.strokeStyle = isGhost ? '#AAAAAA' : '#444444'; 
+                        ctx.lineWidth = 2 / scale;
+                        ctx.strokeRect(-halfS, -halfS, S, S);
                     }
                     
-                    ctx.lineWidth = 2 / scale;
-                    ctx.strokeRect(-halfS, -halfS, S, S);
+                    // --- SQUARE BLOCKS (Wall, Door, Unknown) ---
+                    else { 
+                        ctx.fillStyle = config.color;
+                        ctx.fillRect(-halfS, -halfS, S, S); 
+
+                        if (obj.type === 'metal_door' && scale > 0.5) {
+                            // Draw red hinge detail.
+                            // Defined at the bottom-left corner of the cell (relative to the rotated context).
+                            const detailSize = S * 0.3; 
+                            const detailX = -halfS; // Left edge
+                            const detailY = halfS - detailSize; // Bottom edge
+                            // Used a brighter color to ensure rotation visibility
+                            ctx.fillStyle = '#FF4500'; 
+                            ctx.fillRect(detailX, detailY, detailSize, detailSize); 
+                        }
+
+                        ctx.strokeStyle = isGhost ? '#AAAAAA' : (obj.type === 'metal_wall' ? '#333333' : '#444444'); 
+                        
+                        if (obj.type === 'unknown') {
+                            ctx.strokeStyle = isGhost ? 'rgba(255, 0, 0, 0.5)' : '#FF0000'; // Red outline for unknown blocks
+                        }
+                        
+                        ctx.lineWidth = 2 / scale;
+                        ctx.strokeRect(-halfS, -halfS, S, S);
+                    }
                 }
             }
             
@@ -1125,8 +1176,12 @@
             // Initialize mode to CLICK
             setMode(MODES.CLICK); 
             
-            drawGrid();
-            updateBlockCount(); // Initial count on load
+            // --- WAIT FOR IMAGES TO LOAD BEFORE FIRST DRAW ---
+            loadImages().then(() => {
+                drawGrid();
+                updateBlockCount(); // Initial count on load
+            });
+
 
             // Setup Event Listeners
             window.addEventListener('resize', () => {
@@ -1191,7 +1246,6 @@
 <body class="flex flex-col items-center justify-start h-screen">
 
     <div class="app-container">
-        <!-- Header and Information -->
         <div class="text-white text-center mb-4 mt-4 relative w-full max-w-7xl">
             <h1 id="main-title" class="text-3xl font-bold text-white mb-2 shadow-lg p-2 rounded-lg bg-indigo-700/50">
                 Devast Base Editor
@@ -1200,21 +1254,16 @@
                 Current Mode: <span id="current-mode-display" class="font-semibold text-yellow-400">Click (Single Place/Toggle)</span>. Press **H** for help/controls.
             </p>
             
-            <!-- Dropdown Menu and Controls (Top Right Panel) -->
             <div class="absolute top-0 right-0 p-3 bg-gray-700/50 rounded-lg shadow-xl backdrop-blur-sm flex flex-col items-stretch space-y-2 max-w-xs md:max-w-none">
                 
-                <!-- BLOCK COUNT DISPLAY (NEW) -->
                 <div class="p-2 bg-gray-600 rounded-md text-sm font-semibold text-center text-white border border-gray-500">
                     Total Blocks: <span id="block-count" class="text-yellow-300">0</span>
                 </div>
 
-                <!-- ITEM SELECTION -->
                 <label for="item-select" class="text-xs text-gray-200 block mt-2">Place Feature:</label>
                 <select id="item-select" class="p-2 text-sm bg-gray-800 text-white border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-150" onchange="handleItemChange(event)">
-                    <!-- Options populated by JS -->
-                </select>
+                    </select>
                 
-                <!-- MODE SELECTION BUTTONS -->
                 <div class="flex justify-between space-x-2 p-1 bg-gray-800 rounded-md">
                     <button id="mode-btn-click" class="mode-btn" title="Click Mode (Single Place/Toggle)">
                         🖱️
@@ -1230,7 +1279,6 @@
                     </button>
                 </div>
 
-                <!-- CODE GENERATION BUTTON -->
                 <button id="generate-code-btn" class="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm rounded-md shadow-lg transition duration-200 transform hover:scale-[1.02]">
                     Generate Map Code
                 </button>
@@ -1238,18 +1286,15 @@
             </div>
         </div>
 
-        <!-- Canvas Container -->
         <div class="flex flex-grow items-center justify-center w-full max-w-full rounded-xl mb-4">
             <canvas id="gridCanvas"></canvas>
         </div>
 
 
-        <!-- Code Output & Input Section -->
         <div id="code-output-container" class="w-full max-w-4xl p-4 bg-gray-800 rounded-lg shadow-2xl mb-8">
             
             <h2 class="text-xl font-bold text-gray-100 mb-3">Map Code Interface</h2>
             
-            <!-- Input Area for Loading (New) -->
             <div class="mb-4">
                 <label for="map-code-input" class="text-gray-300 text-sm mb-1 block">Paste Map Code to Load Blocks:</label>
                 <textarea id="map-code-input" rows="3" class="w-full p-3 bg-gray-900 text-yellow-300 border border-gray-700 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Paste your !b=ID:X:Y:R code string here..."></textarea>
@@ -1260,7 +1305,6 @@
             
             <hr class="border-gray-700 mb-4">
 
-            <!-- Output Area for Exporting -->
             <label for="map-code-output" class="text-gray-300 text-sm mb-1 block">Generated Map Code (Export):</label>
             <textarea id="map-code-output" rows="5" class="w-full p-3 bg-gray-900 text-green-300 border border-gray-700 rounded-md"></textarea>
             <button id="copy-code-btn" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition duration-150">
@@ -1270,7 +1314,6 @@
 
     </div>
 
-    <!-- Help/Controls Pop-up Modal -->
     <div id="helpModalOverlay" class="modal-overlay hidden">
         <div id="helpModal" class="modal-content bg-gray-800 text-white p-6 rounded-xl shadow-2xl w-full max-w-lg border-2 border-indigo-500">
             <div class="flex justify-between items-start mb-4">
