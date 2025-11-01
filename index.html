@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -112,7 +113,7 @@
             'metal_wall': { name: 'Metal Wall (1x1 White)', color: '#FFFFFF', length: 1, widthRatio: 1, shapeType: 'square', image: './assets/metal_wall.png' },
             'metal_door': { name: 'Metal Door (1x1 Gray, Red Hinge)', color: '#808080', length: 1, widthRatio: 1, shapeType: 'square', image: './assets/metal_door.png' },
             'tiled_floor': { name: 'Tiled Floor (1x1 White Plus)', color: '#505050', length: 1, widthRatio: 1, shapeType: 'square', image: './assets/tiled_floor.png' },
-            // NEW BLOCK: METAL LOW WALL
+            // NEW BLOCK: METAL LOW WALL (ID 70, color #B0B0B0)
             'metal_low_wall': { name: 'Metal Low Wall (1x1 Half Gray)', color: '#B0B0B0', length: 1, widthRatio: 1, shapeType: 'half-square', image: './assets/low_wall.png' },
             'unknown': { name: 'Unknown Block', color: '#000000', length: 1, widthRatio: 1, shapeType: 'square', image: null }
         };
@@ -138,9 +139,6 @@
         }
 
         // --- Image Loading ---
-        // NOTE: Images are included in the config but will not load unless you place them
-        // in an 'assets' folder relative to this file. The code uses fallback shapes
-        // if the images fail to load, restoring the look from before the image attempt.
         const IMAGE_CACHE = {};
 
         /**
@@ -154,7 +152,6 @@
                 if (config.image) {
                     imagesToLoad.push(new Promise((resolve, reject) => {
                         const img = new Image();
-                        // This prevents potential image-related CORS errors if running locally in certain environments
                         img.crossOrigin = 'anonymous';
                         img.onload = () => {
                             IMAGE_CACHE[key] = img;
@@ -162,10 +159,8 @@
                         };
                         img.onerror = () => {
                             console.warn(`Failed to load image for ${key}: ${config.image}. Falling back to shape drawing.`);
-                            // Still resolve so the app can start
                             resolve();
                         };
-                        // NOTE: If running locally, you must create an 'assets' folder with the images
                         img.src = config.image; 
                     }));
                 }
@@ -1311,7 +1306,7 @@
                 <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
                     <li>**Zoom**: Use the **Scroll Wheel** (or pinch on touch devices).</li>
                     <li>**Pan/Move**: Use **WASD** keys or **Middle Mouse Click & Drag**.</li>
-                    <li>**Rotate Ghost Preview**: Press **R** to rotate the object ghost before placing (only for applicable items like 3x1 features, **Fridge**, **Low Wall**, or **Bag**).</li>
+                    <li>**Rotate Ghost Preview**: Press **R** to rotate the object ghost before placing (only for applicable items like 3x1 features, **Fridge**, **Metal Low Wall**, or **Bag**).</li>
                     <li>**Toggle Help**: Press **H** to show/hide this modal.</li>
                 </ul>
                 <h3 class="text-xl font-semibold text-indigo-300">Placement Modes</h3>
