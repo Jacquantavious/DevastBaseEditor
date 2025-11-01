@@ -188,13 +188,13 @@
         const GRID_SIZE = 149; // Devast Base size
         const CELL_PIXELS = 32; // Size of a single grid cell in screen pixels (before zoom)
         
-        // Block definitions (type: [key, sizeX, sizeY, imagePath])
+        // Block definitions (type: [key, sizeX, sizeY, imagePath]) - imagePath is null to force color rendering
         const BLOCKS = {
             FLOOR: ['FLOOR', 1, 1, null],
             WALL: ['WALL', 1, 1, null],
             DOOR: ['DOOR', 1, 2, null], 
-            BENCH: ['BENCH', 3, 1, null], // 3x1 blue rectangle
-            RESEARCH: ['RESEARCH', 3, 1, null], // 3x1 brown rectangle
+            BENCH: ['BENCH', 3, 1, null], 
+            RESEARCH: ['RESEARCH', 3, 1, null], 
             // Add more blocks here
         };
         
@@ -369,23 +369,35 @@
                 ctx.globalAlpha = 1.0; // Reset alpha for drawing the block color on top
             }
             
-            // Draw the block (solid color only)
+            // --- DRAW BLOCK LOGIC (Restored to Basic Shapes/Colors) ---
+            
+            let color = '#f0f0f0'; // Default fallback
+            
             if (blockKey === 'FLOOR') {
-                ctx.fillStyle = '#606060'; // Dark gray for floor
+                color = '#606060'; // Dark gray for floor
             } else if (blockKey === 'WALL') {
-                ctx.fillStyle = '#303030'; // Very dark gray for wall
+                color = '#303030'; // Very dark gray for wall
             } else if (blockKey === 'DOOR') {
-                ctx.fillStyle = '#cc8400'; // Brown/Orange for door
+                color = '#cc8400'; // Brown/Orange for door
             } else if (blockKey === 'BENCH') {
-                ctx.fillStyle = '#3b82f6'; // Blue-500 for BENCH (blue rectangle)
+                color = '#3b82f6'; // Blue-500 for BENCH (blue rectangle)
             } else if (blockKey === 'RESEARCH') {
-                ctx.fillStyle = '#8b5e32'; // Brown for RESEARCH (brown rectangle)
-            } else {
-                ctx.fillStyle = '#f0f0f0'; // Default fallback
-            }
+                color = '#8b5e32'; // Brown for RESEARCH (brown rectangle)
+            } 
+            
+            ctx.fillStyle = color;
             
             // Draw the rectangle from the center point
             ctx.fillRect(-drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+
+            // Draw a distinguishing feature for the research bench (as requested originally)
+            if (blockKey === 'RESEARCH' && !isInvalid) {
+                ctx.fillStyle = '#fde047'; // Yellow dot
+                // Draw a small circle at the center of the block for visual distinction
+                ctx.beginPath();
+                ctx.arc(0, 0, drawWidth / 6, 0, 2 * Math.PI);
+                ctx.fill();
+            }
 
             // Restore canvas state
             ctx.restore();
@@ -543,9 +555,6 @@
                 const existingDef = BLOCKS[existingBlock.blockKey];
                 const blockWidth = existingDef[1];
                 const blockHeight = existingDef[2];
-
-                // OPTIMIZATION: To ensure the whole block is deleted, we need to find the TOP-LEFT
-                // for simplicity in this demo, let's just clear the cell being clicked.
                 
                 for (let x = gridX; x < gridX + width; x++) {
                     for (let y = gridY; y < gridY + height; y++) {
@@ -1160,8 +1169,6 @@
             // Set canvas size (always fill its container)
             canvas.width = canvas.parentElement.clientWidth;
             canvas.height = canvas.parentElement.clientHeight;
-
-            // Image loading removed. Proceed directly.
 
             // Initialize mode and block
             populateBlockSelector();
