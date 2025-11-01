@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Devast Base Editor (H for Help)</title>
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom CSS for Game/App Styling */
@@ -58,6 +59,10 @@
         .icon-btn.delete-mode.active {
             background-color: #dc2626; /* Active/Selected color (Red-600) for Delete Mode */
         }
+        .icon-btn.floor-mode.active {
+            background-color: #f59e0b; /* Active/Selected color (Amber-500) for Floor Mode */
+            color: black;
+        }
         .tooltip {
             visibility: hidden;
             position: absolute;
@@ -88,11 +93,15 @@
 </head>
 <body class="bg-gray-900 text-gray-100">
 
+    <!-- Main Application Container -->
     <div class="app-container">
 
+        <!-- Header/Title -->
         <h1 class="text-3xl font-bold my-4 text-indigo-400">Devast Base Editor</h1>
 
+        <!-- Tool Selection / Menu -->
         <div class="flex flex-wrap justify-center gap-2 p-3 bg-gray-800 rounded-lg shadow-xl mb-4 max-w-full" id="menuContainer">
+            <!-- Mode Buttons -->
             <div class="flex space-x-2 border-r border-gray-700 pr-2 mr-2">
                 <div class="icon-btn-container relative">
                     <button id="mode-click" class="icon-btn p-2 rounded-md active" data-mode="click" title="Click Mode (Default)">🖱️</button>
@@ -112,6 +121,7 @@
                 </div>
             </div>
 
+            <!-- Object Selection Buttons -->
             <div class="flex space-x-2 border-r border-gray-700 pr-2 mr-2" id="objectSelection">
                 <div class="icon-btn-container relative">
                     <button id="object-wall" class="icon-btn p-2 rounded-md" data-object="Wall" title="Wall (Cost: 2)">🧱</button>
@@ -143,7 +153,12 @@
                 </div>
             </div>
 
+            <!-- Action Buttons -->
             <div class="flex space-x-2">
+                <div class="icon-btn-container relative">
+                    <button id="toggle-floor-view" class="icon-btn p-2 rounded-md floor-mode" title="Toggle Floor Layer View">🧅</button>
+                    <span class="tooltip">Toggle Floor Layer View (Only edit floor tiles)</span>
+                </div>
                 <div class="icon-btn-container relative">
                     <button id="action-save" class="icon-btn p-2 rounded-md" title="Save Base Data">💾</button>
                     <span class="tooltip">Save Base Data</span>
@@ -159,12 +174,15 @@
             </div>
         </div>
 
+        <!-- Info Bar -->
         <div class="bg-gray-800 p-2 rounded-lg shadow-xl mb-4 w-full max-w-lg">
             <p id="info-bar" class="text-sm text-center text-gray-400">Click on an object or mode to begin. Press **H** for help.</p>
         </div>
 
+        <!-- Canvas for Grid -->
         <canvas id="gridCanvas" class="shadow-2xl"></canvas>
 
+        <!-- Stats/Cost Display -->
         <div class="bg-gray-800 p-3 rounded-lg shadow-xl mt-4 w-full max-w-lg flex justify-between">
             <p class="text-lg font-semibold text-indigo-300">Total Cost:</p>
             <p id="total-cost" class="text-lg font-bold text-green-400">0</p>
@@ -172,6 +190,7 @@
 
     </div>
 
+    <!-- Help Modal (Initially Hidden) -->
     <div id="helpModal" class="modal fixed inset-0 flex items-center justify-center hidden">
         <div class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full border border-indigo-500">
             <div class="flex justify-between items-center border-b border-gray-700 pb-3 mb-4">
@@ -185,8 +204,12 @@
                     <li>**Zoom**: Use the **Scroll Wheel** (or pinch on touch devices).</li>
                     <li>**Pan/Move**: Use **WASD** keys or **Middle Mouse Click & Drag**.</li>
                     <li>**Rotate Ghost Preview**: Press **R** to rotate the object ghost before placing (only for applicable items like 3x1 features, **Fridge**, **Door**, or **Bag**).</li>
-                    <li>**Toggle Layer View**: Press **G** to toggle the Layer Mode.</li>
                     <li>**Toggle Help**: Press **H** to show/hide this modal.</li>
+                </ul>
+                
+                <h3 class="text-xl font-semibold text-indigo-300">Layering and Restrictions</h3>
+                <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
+                    <li>**Floor View (🧅)**: When active, non-floor objects (Walls, Fridges, etc.) are drawn faintly. You can **ONLY** place or delete **Wood Plank** and **Metal Plank** floor tiles.</li>
                 </ul>
 
                 <h3 class="text-xl font-semibold text-indigo-300">Placement Modes</h3>
@@ -204,12 +227,14 @@
         </div>
     </div>
 
+    <!-- JavaScript Game Logic -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const canvas = document.getElementById('gridCanvas');
             const ctx = canvas.getContext('2d');
             const infoBar = document.getElementById('info-bar');
             const menuContainer = document.getElementById('menuContainer');
+            const toggleFloorViewBtn = document.getElementById('toggle-floor-view');
             const totalCostDisplay = document.getElementById('total-cost');
             const helpModal = document.getElementById('helpModal');
 
@@ -219,7 +244,7 @@
             const MAX_ZOOM = 40;
             const MIN_ZOOM = 10;
             
-            // Define colors - MODIFIED GHOST_BORDER to #777777
+            // Define colors
             const COLORS = {
                 GRID_LINE: '#333333',
                 FRIDGE: '#4a4a4a',
@@ -227,7 +252,7 @@
                 WOOD_PLANK: '#783c18',
                 METAL_PLANK: '#505a60',
                 PLACING_GHOST: '#34d399', // Emerald-400 for Placing
-                GHOST_BORDER: '#777777', // NEW GREY COLOR for Fridge/Door/Bag Ghost Border
+                GHOST_BORDER: '#777777', // Grey color for Fridge/Door/Bag Ghost Border
                 HIGHLIGHT: '#f87171', // Red-500 for Danger/Delete/Highlight
                 TEXT: '#d1d5db',
                 INFO: '#9ca3af',
@@ -244,13 +269,16 @@
             // Define object properties and costs
             const OBJECTS = {
                 'Wall': { color: COLORS.WALL, size: [1, 1], cost: 2, icon: '🧱' },
-                'Wood Plank': { color: COLORS.WOOD_PLANK, size: [1, 1], rotatable: false, cost: 1, icon: '🪵' },
-                'Metal Plank': { color: COLORS.METAL_PLANK, size: [1, 1], rotatable: false, cost: 1, icon: '🛡️' },
+                'Wood Plank': { color: COLORS.WOOD_PLANK, size: [1, 1], cost: 1, icon: '🪵' },
+                'Metal Plank': { color: COLORS.METAL_PLANK, size: [1, 1], cost: 1, icon: '🛡️' },
                 'Fridge': { color: COLORS.FRIDGE, size: [3, 1], rotatable: true, cost: 8, icon: '🧊' },
                 'Door': { color: COLORS.DOOR, size: [1, 1], rotatable: true, cost: 3, icon: '🚪' },
                 'Bag': { color: COLORS.BAG, size: [1, 1], rotatable: true, cost: 1, icon: '🛍️' },
                 'Stash Box': { color: COLORS.STASH_BOX, size: [1, 1], cost: 2, icon: '📦' },
             };
+            
+            // Define which objects belong to the floor layer for restriction/view toggling
+            const FLOOR_OBJECTS = ['Wood Plank', 'Metal Plank'];
 
             // --- State Variables ---
             let grid = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
@@ -269,7 +297,7 @@
             let cloneBuffer = [];
             let cloneSelectBox = null;
             let isHelpVisible = true; // Show help on load
-            let isLayerMode = false; // NEW: State for Layer Visibility Mode
+            let isFloorView = false; // NEW state for floor layering view
 
             // --- Utility Functions ---
 
@@ -364,30 +392,35 @@
                     for (let c = 0; c < GRID_SIZE; c++) {
                         const cell = grid[r][c];
                         if (cell && cell.origin) {
-                            const { type, x, y, rotation } = cell;
-                            const { color, size } = OBJECTS[type];
+                            const { type, rotation } = cell;
+                            const { color } = OBJECTS[type];
                             const [w, h] = getObjectSize(type, rotation);
+                            
+                            const isFloor = FLOOR_OBJECTS.includes(type);
 
-                            let opacity = 1.0;
-                            // NEW LAYER MODE LOGIC
-                            if (isLayerMode) {
-                                // Assume Wood Plank and Metal Plank are 'Floor' objects
-                                if (type !== 'Wood Plank' && type !== 'Metal Plank') {
-                                    // Make non-floor objects highly transparent (low visibility)
-                                    opacity = 0.15; 
-                                }
+                            ctx.save(); // Save context before applying alpha
+                            
+                            if (isFloorView && !isFloor) {
+                                // Non-floor objects (Walls, Fridges) in floor view mode: Draw faintly
+                                ctx.globalAlpha = 0.15; 
+                            } else if (isFloorView && isFloor) {
+                                // Floor objects in floor view mode: Draw fully
+                                ctx.globalAlpha = 1.0;
+                            } else {
+                                // Normal view mode: Draw fully
+                                ctx.globalAlpha = 1.0;
                             }
 
-                            ctx.globalAlpha = opacity;
+                            // Draw object
                             ctx.fillStyle = color;
                             ctx.fillRect(c * currentTileSize, r * currentTileSize, w * currentTileSize, h * currentTileSize);
 
-                            // Draw a subtle border for placed objects
+                            // Draw border
                             ctx.strokeStyle = '#222222';
                             ctx.lineWidth = 1;
                             ctx.strokeRect(c * currentTileSize, r * currentTileSize, w * currentTileSize, h * currentTileSize);
                             
-                            ctx.globalAlpha = 1.0; // Reset alpha after drawing the object
+                            ctx.restore(); // Restore context to full alpha
                         }
                     }
                 }
@@ -395,9 +428,20 @@
                 // 3. Draw Preview Ghost (if applicable)
                 if (mouseX >= 0 && mouseY >= 0 && currentMode !== 'delete' && currentMode !== 'clone') {
                     const [tileX, tileY] = screenToGrid(mouseX, mouseY);
-
-                    if (tileX !== -1 && tileY !== -1) {
-                        const { color, rotatable } = OBJECTS[currentObject];
+                    
+                    // NEW: Prevent ghost drawing if in floor view and selected object is not floor
+                    const isCurrentObjectFloor = FLOOR_OBJECTS.includes(currentObject);
+                    if (isFloorView && !isCurrentObjectFloor) {
+                         // Show warning ghost
+                         if (tileX !== -1 && tileY !== -1) {
+                            const [w, h] = getObjectSize(currentObject, currentRotation);
+                            ctx.fillStyle = COLORS.ERROR;
+                            ctx.globalAlpha = 0.6;
+                            ctx.fillRect(tileX * currentTileSize, tileY * currentTileSize, w * currentTileSize, h * currentTileSize);
+                            ctx.globalAlpha = 1.0;
+                         }
+                    } else if (tileX !== -1 && tileY !== -1) {
+                        const { rotatable } = OBJECTS[currentObject];
                         const [w, h] = getObjectSize(currentObject, currentRotation);
 
                         // Placement Box
@@ -408,7 +452,7 @@
                         
                         // Rotatable object border (the "highlighted border" for fridge)
                         if (rotatable) {
-                            ctx.strokeStyle = COLORS.GHOST_BORDER; // The modified color!
+                            ctx.strokeStyle = COLORS.GHOST_BORDER; 
                             ctx.lineWidth = 2;
                             ctx.strokeRect(tileX * currentTileSize, tileY * currentTileSize, w * currentTileSize, h * currentTileSize);
                         }
@@ -440,7 +484,6 @@
                             fillColor = COLORS.SELECT_BOX;
                             strokeColor = COLORS.SELECTED_OBJECT;
                         } else { // Line mode
-                            // Line mode uses a smaller box logic, but this is fine for the area preview
                             fillColor = COLORS.SELECT_BOX;
                             strokeColor = COLORS.SELECTED_OBJECT;
                         }
@@ -517,21 +560,20 @@
                 return canvasToGrid(canvasX, canvasY);
             };
 
-            // --- Grid Manipulation Functions ---
-
+            // --- Grid Manipulation Functions (Pure Logic, No UI Updates) ---
+            
             // Checks if an object of size [w, h] can be placed at [r, c]
-            const canPlace = (r, c, w, h, excludeObject = null) => {
+            const canPlace = (r, c, w, h) => {
                 if (r < 0 || c < 0 || r + h > GRID_SIZE || c + w > GRID_SIZE) {
                     return false;
                 }
                 
                 for (let row = r; row < r + h; row++) {
                     for (let col = c; col < c + w; col++) {
-                        // Check bounds again (should be covered by main check, but for safety)
                         if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return false;
                         
                         // If cell is occupied by the origin of another object
-                        if (grid[row][col] && grid[row][col].origin && grid[row][col] !== excludeObject) {
+                        if (grid[row][col] && grid[row][col].origin) {
                             return false;
                         }
                     }
@@ -539,79 +581,79 @@
                 return true;
             };
 
-            // Places an object at the origin tile [r, c] with size [w, h]
-            const placeObject = (r, c, type, rotation) => {
-                const [w, h] = getObjectSize(type, rotation);
-
-                // 1. Check placement feasibility
-                if (!canPlace(r, c, w, h)) {
-                    showInfo(`Placement failed: Area at [${c}, ${r}] is blocked.`, COLORS.ERROR);
-                    return false;
+            // NEW: Core logic for placing an object. Returns status object. Does NOT update UI.
+            const placeObjectLogic = (r, c, type, rotation) => {
+                // 1. Restriction Check
+                if (isFloorView && !FLOOR_OBJECTS.includes(type)) {
+                    return { success: false, restricted: true }; 
                 }
                 
-                // 2. Place the new object
+                const [w, h] = getObjectSize(type, rotation);
+                
+                // 2. Check placement feasibility
+                if (!canPlace(r, c, w, h)) {
+                    return { success: false, restricted: false };
+                }
+                
+                // 3. Place the new object
                 const newObject = { type, rotation, origin: true };
                 grid[r][c] = newObject;
 
-                // 3. Mark all covered tiles (for multi-tile objects)
+                // 4. Mark all covered tiles (for multi-tile objects)
                 for (let row = r; row < r + h; row++) {
                     for (let col = c; col < c + w; col++) {
-                        // Don't overwrite the origin tile's properties
                         if (row !== r || col !== c) {
-                            grid[row][col] = { type, origin: false, parent: {r, c} }; // Mark as non-origin part of the object
+                            grid[row][col] = { type, origin: false, parent: {r, c} };
                         }
                     }
                 }
                 
-                showInfo(`Placed ${type} at [${c}, ${r}].`, COLORS.INFO);
-                updateCostDisplay();
-                drawGrid();
-                return true;
+                return { success: true, restricted: false };
             };
 
-            // Removes an object from tile [r, c]
-            const removeObject = (r, c) => {
+            // NEW: Core logic for removing an object. Returns status object. Does NOT update UI.
+            const removeObjectLogic = (r, c) => {
                 const cell = grid[r][c];
-                if (cell) {
-                    let originR = r;
-                    let originC = c;
-                    let objType = cell.type;
-                    
-                    if (!cell.origin) {
-                        // If it's a non-origin part, find the parent's origin
-                        if (cell.parent) {
-                            originR = cell.parent.r;
-                            originC = cell.parent.c;
-                            objType = grid[originR][originC].type;
-                        } else {
-                            // Should not happen, but clear the single tile just in case
-                            grid[r][c] = null;
-                            updateCostDisplay();
-                            drawGrid();
-                            showInfo(`Removed single-tile object at [${c}, ${r}].`, COLORS.INFO);
-                            return;
-                        }
-                    }
-                    
-                    // Clear the entire object area
-                    const { rotation } = grid[originR][originC];
-                    const [w, h] = getObjectSize(objType, rotation);
-                    
-                    for (let row = originR; row < originR + h; row++) {
-                        for (let col = originC; col < originC + w; col++) {
-                            // Check that the cell belongs to the object being deleted (optional safety check)
+                if (!cell) return { success: false, type: null, restricted: false };
+
+                let originR = r;
+                let originC = c;
+                let objType = cell.type;
+                
+                if (!cell.origin) {
+                    if (!cell.parent) return { success: false, type: objType, restricted: false };
+                    originR = cell.parent.r;
+                    originC = cell.parent.c;
+                    objType = grid[originR][originC]?.type || objType;
+                    if (!objType) return { success: false, type: null, restricted: false };
+                }
+                
+                // Restriction Check
+                if (isFloorView && !FLOOR_OBJECTS.includes(objType)) {
+                    return { success: false, type: objType, restricted: true };
+                }
+
+                // If the origin is null (e.g. somehow deleted while being processed), skip
+                if (!grid[originR][originC]) return { success: false, type: objType, restricted: false };
+                
+                const { rotation } = grid[originR][originC];
+                const [w, h] = getObjectSize(objType, rotation);
+                
+                // Clear the entire object area
+                for (let row = originR; row < originR + h; row++) {
+                    for (let col = originC; col < originC + w; col++) {
+                        if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
+                            // Only clear tiles that belong to this object to prevent clearing multiple origins accidentally
                             if (grid[row][col] && grid[row][col].type === objType) {
                                 grid[row][col] = null;
                             }
                         }
                     }
-
-                    showInfo(`Removed ${objType} at [${originC}, ${originR}].`, COLORS.INFO);
-                    updateCostDisplay();
-                    drawGrid();
                 }
+                return { success: true, type: objType, restricted: false };
             };
-            
+
+
             // --- Input Handlers ---
 
             const showInfo = (message, color = COLORS.INFO) => {
@@ -665,42 +707,43 @@
                 }
                 
                 // Mode-specific initial click logic
-                if (currentMode === 'click' || currentMode === 'line') {
-                    // For single click or starting a line drag
-                } else if (currentMode === 'clone') {
+                if (currentMode === 'clone') {
                     if (isCloneAreaSelected) {
                         // Place the cloned buffer
-                        const [w, h] = [cloneSelectBox.maxX - cloneSelectBox.minX + 1, cloneSelectBox.maxY - cloneSelectBox.minY + 1];
-                        
                         let successfulPlacements = 0;
+                        let restrictedCount = 0;
+                        let lastRestrictedType = currentObject;
+
                         for (const item of cloneBuffer) {
                             const targetR = tileY + item.r;
                             const targetC = tileX + item.c;
                             
-                            // Check against buffer boundaries and grid boundaries
                             if (targetR >= 0 && targetR < GRID_SIZE && targetC >= 0 && targetC < GRID_SIZE) {
-                                // Simple check: can the origin tile of the item be placed here?
-                                const [objW, objH] = getObjectSize(item.type, item.rotation);
-                                if (canPlace(targetR, targetC, objW, objH)) {
-                                    placeObject(targetR, targetC, item.type, item.rotation);
+                                const result = placeObjectLogic(targetR, targetC, item.type, item.rotation);
+                                
+                                if (result.success) {
                                     successfulPlacements++;
+                                } else if (result.restricted) {
+                                    restrictedCount++;
+                                    lastRestrictedType = item.type;
                                 }
                             }
                         }
+
                         if (successfulPlacements > 0) {
                             showInfo(`Placed ${successfulPlacements} objects from clone buffer starting at [${tileX}, ${tileY}].`, COLORS.INFO);
+                        } else if (restrictedCount > 0) {
+                            showInfo(`Placement failed: Cannot place ${lastRestrictedType} (and ${restrictedCount - 1} others) in Floor View.`, COLORS.ERROR);
                         } else {
-                            showInfo('Placement failed: Cloned area is blocked or out of bounds.', COLORS.ERROR);
+                            showInfo('Placement failed: Area is blocked or out of bounds.', COLORS.ERROR);
                         }
                         
                         isCloneAreaSelected = false;
                         cloneBuffer = [];
                         cloneSelectBox = null;
-                        
-                    } else {
-                        // Start selecting clone area
-                        // Handled by mousemove/mouseup logic
-                    }
+                        updateCostDisplay();
+                        drawGrid();
+                    } 
                 }
             };
 
@@ -730,8 +773,6 @@
                             msg += `Clone Mode: Select area to copy.`;
                         } else if (currentMode === 'line') {
                             msg += `Line Mode: Drag to create a line of ${currentObject}.`;
-                        } else if (currentMode === 'click') {
-                             // Do not change info bar in click mode while dragging, unless drag is for pan
                         }
 
                         if (currentMode !== 'click' || event.buttons === 0) { // Keep info bar relevant
@@ -752,9 +793,9 @@
                                 objectInfo = cell.type;
                             }
                         }
-                        showInfo(`Tile [${tileX}, ${tileY}] - Object: ${objectInfo} - Mode: ${currentMode} - Selected: ${currentObject}`, COLORS.INFO);
+                        showInfo(`Tile [${tileX}, ${tileY}] - Object: ${objectInfo} - Mode: ${currentMode} - Selected: ${currentObject} ${isFloorView ? ' (Floor View 🧅)' : ''}`, COLORS.INFO);
                     } else {
-                        showInfo(`Mode: ${currentMode} - Selected: ${currentObject}`, COLORS.INFO);
+                        showInfo(`Mode: ${currentMode} - Selected: ${currentObject} ${isFloorView ? ' (Floor View 🧅)' : ''}`, COLORS.INFO);
                     }
                 }
 
@@ -771,7 +812,6 @@
                 const [endTileX, endTileY] = screenToGrid(event.clientX, event.clientY);
 
                 if (startTileX === -1 || startTileY === -1 || endTileX === -1 || endTileY === -1) {
-                    // Drag ended out of bounds
                     return;
                 }
                 
@@ -784,50 +824,99 @@
                     // Single click for place/remove
                     if (startTileX === endTileX && startTileY === endTileY) {
                         if (grid[startTileY][startTileX]) {
-                            removeObject(startTileY, startTileX);
+                            const result = removeObjectLogic(startTileY, startTileX);
+                            if (result.success) {
+                                showInfo(`Removed ${result.type} at [${startTileX}, ${startTileY}].`, COLORS.INFO);
+                            } else if (result.restricted) {
+                                showInfo(`Cannot remove ${result.type}: Only floor objects are editable in Floor View.`, COLORS.ERROR);
+                            } else {
+                                 showInfo(`Removal failed at [${startTileX}, ${startTileY}].`, COLORS.ERROR);
+                            }
                         } else {
-                            placeObject(startTileY, startTileX, currentObject, currentRotation);
+                            const result = placeObjectLogic(startTileY, startTileX, currentObject, currentRotation);
+                            if (result.success) {
+                                showInfo(`Placed ${currentObject} at [${startTileX}, ${startTileY}].`, COLORS.INFO);
+                            } else if (result.restricted) {
+                                showInfo(`Cannot place ${currentObject}: Only floor objects are editable in Floor View.`, COLORS.ERROR);
+                            } else {
+                                showInfo(`Placement failed: Area at [${startTileX}, ${startTileY}] is blocked.`, COLORS.ERROR);
+                            }
                         }
-                    } else {
-                         // Dragging in click mode should fall back to line or be ignored.
-                         // For simplicity, we ignore the drag unless it was a single click.
-                    }
+                        updateCostDisplay();
+                        drawGrid();
+                    } 
                 } else if (currentMode === 'line') {
                     // Line mode places the object along a straight line (horizontal or vertical)
                     let placedCount = 0;
+                    let restrictedCount = 0;
                     
+                    const processPlacement = (r, c) => {
+                        const result = placeObjectLogic(r, c, currentObject, currentRotation);
+                        if (result.success) {
+                            placedCount++;
+                        } else if (result.restricted) {
+                            restrictedCount++;
+                        }
+                    }
+
                     if (Math.abs(startTileX - endTileX) > Math.abs(startTileY - endTileY)) {
                         // Horizontal line (or mostly horizontal)
                         const startR = startTileY;
                         const stepX = startTileX < endTileX ? 1 : -1;
                         for (let c = startTileX; c !== endTileX + stepX; c += stepX) {
-                             if (placeObject(startR, c, currentObject, currentRotation)) placedCount++;
+                             processPlacement(startR, c);
                         }
                     } else {
                         // Vertical line (or mostly vertical)
                         const startC = startTileX;
                         const stepY = startTileY < endTileY ? 1 : -1;
                         for (let r = startTileY; r !== endTileY + stepY; r += stepY) {
-                            if (placeObject(r, startC, currentObject, currentRotation)) placedCount++;
+                            processPlacement(r, startC);
                         }
                     }
-                    showInfo(`Placed ${placedCount} items in a line.`, placedCount > 0 ? COLORS.INFO : COLORS.ERROR);
+                    
+                    if (placedCount > 0) {
+                        showInfo(`Placed ${placedCount} items in a line.`, COLORS.INFO);
+                    } else if (restrictedCount > 0) {
+                        showInfo(`Placement failed: Cannot place ${currentObject} in Floor View.`, COLORS.ERROR);
+                    } else {
+                        showInfo('Placement failed: Area is blocked or out of bounds.', COLORS.ERROR);
+                    }
+                    updateCostDisplay();
                     drawGrid();
                     
                 } else if (currentMode === 'delete') {
                     // Delete mode removes all objects in the box
                     let removedCount = 0;
+                    let attemptedCount = 0;
+                    let restrictedCount = 0;
+                    let lastRestrictedType = '';
+
                     for (let r = minY; r <= maxY; r++) {
                         for (let c = minX; c <= maxX; c++) {
                             const cell = grid[r][c];
                             if (cell && cell.origin) {
-                                // Remove object by its origin tile
-                                removeObject(r, c); 
-                                removedCount++;
+                                attemptedCount++;
+                                const result = removeObjectLogic(r, c);
+                                if (result.success) {
+                                    removedCount++;
+                                } else if (result.restricted) {
+                                    restrictedCount++;
+                                    lastRestrictedType = result.type;
+                                }
                             }
                         }
                     }
-                    showInfo(`Removed ${removedCount} object origins in the selected area.`, removedCount > 0 ? COLORS.HIGHLIGHT : COLORS.INFO);
+
+                    if (removedCount > 0) {
+                        showInfo(`Removed ${removedCount} object origins.`, COLORS.HIGHLIGHT);
+                    } else if (restrictedCount > 0) {
+                        showInfo(`Deletion failed: Cannot remove ${lastRestrictedType} (and ${restrictedCount - 1} others) in Floor View.`, COLORS.ERROR);
+                    } else {
+                        showInfo('No objects found to delete.', COLORS.INFO);
+                    }
+                    
+                    updateCostDisplay();
                     drawGrid();
                     
                 } else if (currentMode === 'clone') {
@@ -857,9 +946,9 @@
                         } else {
                              showInfo(`No objects selected for cloning.`, COLORS.WARNING);
                         }
-                    } else {
-                        // Area placement is handled on mousedown, so no logic here
                     }
+                    // Placement is handled on mousedown, so no logic here
+                    drawGrid();
                 }
             };
 
@@ -874,11 +963,6 @@
                     } else {
                         showInfo(`${currentObject} is not rotatable.`, COLORS.WARNING);
                     }
-                } else if (event.key === 'g' || event.key === 'G') {
-                    // NEW: Toggle Layer Mode
-                    isLayerMode = !isLayerMode;
-                    showInfo(`Layer Mode: ${isLayerMode ? 'ON (Floors Visible)' : 'OFF (All Visible)'}`, COLORS.INFO);
-                    drawGrid();
                 } else if (event.key === 'h' || event.key === 'H') {
                     // Toggle Help Modal
                     isHelpVisible = !isHelpVisible;
@@ -937,7 +1021,8 @@
                         let loadedCount = 0;
                         
                         objectArray.forEach(obj => {
-                            if (placeObject(obj.r, obj.c, obj.type, obj.rotation)) {
+                            const result = placeObjectLogic(obj.r, obj.c, obj.type, obj.rotation);
+                            if (result.success) {
                                 loadedCount++;
                             }
                         });
@@ -987,7 +1072,16 @@
                     showInfo(`Selected object: ${newObject}.`, COLORS.INFO);
                 }
                 // Handle Actions
-                else if (button.id === 'action-save') {
+                else if (button.id === 'toggle-floor-view') {
+                    isFloorView = !isFloorView;
+                    button.classList.toggle('active', isFloorView);
+                    
+                    if (isFloorView) {
+                        showInfo('FLOOR VIEW ON (🧅): Only Wood Plank and Metal Plank are editable.', COLORS.WARNING);
+                    } else {
+                        showInfo('Floor View OFF: All objects are editable.', COLORS.INFO);
+                    }
+                } else if (button.id === 'action-save') {
                     saveBase();
                 } else if (button.id === 'action-load') {
                     loadBase();
