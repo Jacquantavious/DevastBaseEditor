@@ -78,16 +78,16 @@
             transition: transform 0.3s ease-in-out;
         }
         .modal-overlay.visible .modal-content {
-             transform: scale(1);
+            transform: scale(1);
         }
     </style>
     <script>
         // Constants for the grid
-        const GRID_SIZE = 149; 
-        const GRID_FILL_COLOR = '#38523A'; 
-        const GRID_LINE_COLOR = '#000000'; 
-        const BACKGROUND_COLOR = '#1a1a1a'; 
-        const DRAG_THRESHOLD = 5; 
+        const GRID_SIZE = 149;
+        const GRID_FILL_COLOR = '#38523A';
+        const GRID_LINE_COLOR = '#000000';
+        const BACKGROUND_COLOR = '#1a1a1a';
+        const DRAG_THRESHOLD = 5;
 
         // --- Modes ---
         const MODES = {
@@ -99,23 +99,21 @@
 
         // Configuration for different object types
         const OBJECT_CONFIGS = {
-            'research': { name: 'Research (3x1 Blue)', color: '#4C60F5', length: 3, widthRatio: 2/3, shapeType: 'rectangle' },
-            'smelter': { name: 'Smelter (3x1 Red)', color: '#E32636', length: 3, widthRatio: 2/3, shapeType: 'rectangle' },
-            'tesla': { name: 'Tesla (3x1 Green)', color: '#00AA00', length: 3, widthRatio: 2/3, shapeType: 'rectangle' },
+            'research': { name: 'Research (3x1 Blue)', color: '#4C60F5', length: 3, widthRatio: 2/3, shapeType: 'rectangle', image: './assets/day-workbench2.png' },
+            'smelter': { name: 'Smelter (3x1 Red)', color: '#E32636', length: 3, widthRatio: 2/3, shapeType: 'rectangle', image: './assets/smelter.png' },
+            'tesla': { name: 'Tesla (3x1 Green)', color: '#00AA00', length: 3, widthRatio: 2/3, shapeType: 'rectangle', image: './assets/tesla.png' },
             // Adjusted color for Fridge for better visual contrast
-            'fridge': { name: 'Fridge (1x1 Half Gray)', color: '#C0C0C0', length: 1, widthRatio: 1, shapeType: 'half-square' }, 
-            
-            'workbench': { name: 'Workbench (1x1 Brown Circle)', color: '#A0522D', length: 1, widthRatio: 1, shapeType: 'circle' },
-            'firepit': { name: 'Firepit (1x1 Yellow Circle)', color: '#FFD700', length: 1, widthRatio: 1, shapeType: 'circle' },
+            'fridge': { name: 'Fridge (1x1 Half Gray)', color: '#C0C0C0', length: 1, widthRatio: 1, shapeType: 'half-square', image: './assets/fridge.png' },
+            'workbench': { name: 'Workbench (1x1 Brown Circle)', color: '#A0522D', length: 1, widthRatio: 1, shapeType: 'circle', image: './assets/day-workbench.png' },
+            'firepit': { name: 'Firepit (1x1 Yellow Circle)', color: '#FFD700', length: 1, widthRatio: 1, shapeType: 'circle', image: './assets/firepit.png' },
             // NEW BLOCKS
-            'feeder': { name: 'Feeder (1x1 Blue Circle)', color: '#3b82f6', length: 1, widthRatio: 1, shapeType: 'circle' },
-            'weaving': { name: 'Weaving (1x1 Tan Circle)', color: '#d97706', length: 1, widthRatio: 1, shapeType: 'circle' },
-            'bag': { name: 'Bag (1x1 Tan Oval)', color: '#d97706', length: 1, widthRatio: 1, shapeType: 'oval' },
-            
-            'metal_wall': { name: 'Metal Wall (1x1 White)', color: '#FFFFFF', length: 1, widthRatio: 1, shapeType: 'square' },
-            'metal_door': { name: 'Metal Door (1x1 Gray, Red Hinge)', color: '#808080', length: 1, widthRatio: 1, shapeType: 'square' },
-            'tiled_floor': { name: 'Tiled Floor (1x1 White Plus)', color: '#505050', length: 1, widthRatio: 1, shapeType: 'square' },
-            'unknown': { name: 'Unknown Block', color: '#000000', length: 1, widthRatio: 1, shapeType: 'square' } 
+            'feeder': { name: 'Feeder (1x1 Blue Circle)', color: '#3b82f6', length: 1, widthRatio: 1, shapeType: 'circle', image: './assets/feeder.png' },
+            'weaving': { name: 'Weaving (1x1 Tan Circle)', color: '#d97706', length: 1, widthRatio: 1, shapeType: 'circle', image: './assets/weaving.png' },
+            'bag': { name: 'Bag (1x1 Tan Oval)', color: '#d97706', length: 1, widthRatio: 1, shapeType: 'oval', image: './assets/bag.png' },
+            'metal_wall': { name: 'Metal Wall (1x1 White)', color: '#FFFFFF', length: 1, widthRatio: 1, shapeType: 'square', image: './assets/metal_wall.png' },
+            'metal_door': { name: 'Metal Door (1x1 Gray, Red Hinge)', color: '#808080', length: 1, widthRatio: 1, shapeType: 'square', image: './assets/metal_door.png' },
+            'tiled_floor': { name: 'Tiled Floor (1x1 White Plus)', color: '#505050', length: 1, widthRatio: 1, shapeType: 'square', image: './assets/tiled_floor.png' },
+            'unknown': { name: 'Unknown Block', color: '#000000', length: 1, widthRatio: 1, shapeType: 'square', image: null }
         };
 
         // Known IDs for code output
@@ -123,7 +121,7 @@
             'research': 55, 'smelter': 49, 'tesla': 94, 'fridge': 61,
             'workbench': 19, 'firepit': 48, 'metal_wall': 29, 'metal_door': 52,
             'tiled_floor': 85,
-            'unknown': 99, 
+            'unknown': 99,
             // NEW BLOCK IDS
             'feeder': 160,
             'weaving': 57,
@@ -136,53 +134,81 @@
             ID_TO_TYPE[KNOWN_INTEGER_IDS[type]] = type;
         }
 
+        // --- Image Loading ---
+        // NOTE: Images are included in the config but will not load unless you place them
+        // in an 'assets' folder relative to this file. The code uses fallback shapes
+        // if the images fail to load, restoring the look from before the image attempt.
+        const IMAGE_CACHE = {};
+
+        /**
+         * Preloads all images defined in OBJECT_CONFIGS.
+         * Returns a Promise that resolves when all images are loaded.
+         */
+        function loadImages() {
+            const imagesToLoad = [];
+            for (const key in OBJECT_CONFIGS) {
+                const config = OBJECT_CONFIGS[key];
+                if (config.image) {
+                    imagesToLoad.push(new Promise((resolve, reject) => {
+                        const img = new Image();
+                        // This prevents potential image-related CORS errors if running locally in certain environments
+                        img.crossOrigin = 'anonymous';
+                        img.onload = () => {
+                            IMAGE_CACHE[key] = img;
+                            resolve();
+                        };
+                        img.onerror = () => {
+                            console.warn(`Failed to load image for ${key}: ${config.image}. Falling back to shape drawing.`);
+                            // Still resolve so the app can start
+                            resolve();
+                        };
+                        // NOTE: If running locally, you must create an 'assets' folder with the images
+                        img.src = config.image; 
+                    }));
+                }
+            }
+            return Promise.all(imagesToLoad);
+        }
+
         // --- Global State ---
         let scale = 1.0;
         let panX = 0;
         let panY = 0;
-        let baseSize = 0; 
-        
-        let isDragging = false; 
-        let isPanning = false;  
+        let baseSize = 0;
+        let isDragging = false;
+        let isPanning = false;
         let clickStartX = 0;
         let clickStartY = 0;
-        let lastPanX = 0; 
+        let lastPanX = 0;
         let lastPanY = 0;
-
         let canvas;
         let ctx;
-
         let specialObjects = []; // Features/Walls/Doors
-        let floorObjects = [];   // Floor Tiles
-
-        let selectedObjectType = 'metal_door'; 
-        let ghostRow = -1; 
-        let ghostCol = -1; 
-        let ghostRotation = 0; 
+        let floorObjects = []; // Floor Tiles
+        let selectedObjectType = 'metal_door';
+        let ghostRow = -1;
+        let ghostCol = -1;
+        let ghostRotation = 0;
 
         // --- Mode State ---
         let currentMode = MODES.CLICK;
-        let isDraggingForAction = false; 
+        let isDraggingForAction = false;
         let dragStartCell = null;
         let dragCurrentCell = null;
-        let clonedArea = null; 
-        
-        // --- Layer View State (NEW) ---
-        let isFloorLayerVisible = false; 
-        
+        let clonedArea = null;
+
         // --- Modal Elements ---
         let helpModalOverlay;
         let helpModal;
-        let layerViewDisplay; // Element to update
 
         /**
          * Checks if a given object type should be able to rotate visually.
          */
         function isDirectional(type) {
-             const config = OBJECT_CONFIGS[type];
-             if (!config) return false;
-             // 3x1 features (length > 1), the Bag (oval), the Fridge (half-square), and the Metal Door (hinge detail)
-             return config.length > 1 || config.shapeType === 'oval' || type === 'fridge' || type === 'metal_door';
+            const config = OBJECT_CONFIGS[type];
+            if (!config) return false;
+            // 3x1 features (length > 1), the Bag (oval), the Fridge (half-square), and the Metal Door (hinge detail)
+            return config.length > 1 || config.shapeType === 'oval' || type === 'fridge' || type === 'metal_door';
         }
 
         /**
@@ -199,13 +225,13 @@
 
             const col = Math.floor(worldX / originalCellSize);
             const row = Math.floor(worldY / originalCellSize);
-            
+
             const clampedRow = Math.min(GRID_SIZE - 1, Math.max(0, row));
             const clampedCol = Math.min(GRID_SIZE - 1, Math.max(0, col));
 
             return { row: clampedRow, col: clampedCol };
         }
-        
+
         /**
          * Updates the block counter display based on the total number of placed objects.
          */
@@ -213,28 +239,15 @@
             const totalBlocks = specialObjects.length + floorObjects.length;
             document.getElementById('block-count').textContent = totalBlocks;
         }
-        
-        /**
-         * Updates the layer view display text.
-         */
-        function updateLayerViewDisplay() {
-            layerViewDisplay.textContent = isFloorLayerVisible ? 
-                'Floor Layer (Special Blocks Faint) - Press G' : 
-                'Full View (Normal) - Press G';
-            layerViewDisplay.classList.toggle('text-green-400', isFloorLayerVisible);
-            layerViewDisplay.classList.toggle('text-gray-400', !isFloorLayerVisible);
-        }
-
 
         /**
          * Draws the cross detail for Tiled Floor.
          */
         function drawTiledFloorDetail(cellSize, isGhost) {
-            const crossWidth = cellSize * 0.15; 
+            const crossWidth = cellSize * 0.15;
             const halfS = cellSize / 2;
-            
-            ctx.fillStyle = isGhost ? '#BBBBBB' : '#FFFFFF'; 
 
+            ctx.fillStyle = isGhost ? '#BBBBBB' : '#FFFFFF';
             ctx.fillRect(-halfS, -crossWidth / 2, cellSize, crossWidth);
             ctx.fillRect(-crossWidth / 2, -halfS, crossWidth, cellSize);
         }
@@ -242,28 +255,22 @@
         /**
          * Draws a single feature (placed or ghost) onto the canvas.
          * The coordinate system is translated to the center of the anchor cell.
-         * @param {Object} obj The object to draw
-         * @param {number} originalCellSize The unscaled cell size
-         * @param {number} scale The current zoom scale
-         * @param {boolean} isGhost Whether the object is a ghost preview
-         * @param {number} [opacity=1.0] The opacity to draw the object with
          */
-        function drawFeature(obj, originalCellSize, scale, isGhost = false, opacity = 1.0) {
+        function drawFeature(obj, originalCellSize, scale, isGhost = false) {
             const config = OBJECT_CONFIGS[obj.type];
             if (!config) return;
-            if (obj.row < 0 || obj.col < 0) return; 
+
+            if (obj.row < 0 || obj.col < 0) return;
 
             if (isGhost) {
-                ctx.globalAlpha = 0.33; 
-            } else {
-                ctx.globalAlpha = opacity;
+                ctx.globalAlpha = 0.33;
             }
 
             const cellCenterX = obj.col * originalCellSize + originalCellSize / 2;
             const cellCenterY = obj.row * originalCellSize + originalCellSize / 2;
-            
+
             ctx.save();
-            
+
             // 1. Translate to the center of the anchor cell (0, 0 in local space is the center)
             ctx.translate(cellCenterX, cellCenterY);
 
@@ -272,142 +279,159 @@
                 ctx.rotate(obj.rotation * Math.PI / 180);
             }
 
-
             const S = originalCellSize;
             const halfS = S / 2;
 
-            if (config.shapeType === 'rectangle') {
-                // --- 3x1 Feature Drawing (Rectangle) ---
-                
-                const totalLengthPixels = S * config.length; 
-                const totalWidthPixels = S * config.widthRatio; 
+            // --- IMAGE DRAWING LOGIC (Fallback if not loaded) ---
+            const img = IMAGE_CACHE[obj.type];
 
-                const drawXLength = totalWidthPixels; 
-                const drawYLength = totalLengthPixels; 
+            if (img) {
+                // If we have a loaded image, draw it centered, filling the cell size (S x S)
+                ctx.drawImage(img, -halfS, -halfS, S, S);
 
-                const featureDrawX = -drawXLength / 2; 
-                const featureDrawY = -drawYLength / 2; 
-                
-                ctx.fillStyle = config.color;
-                ctx.fillRect(featureDrawX, featureDrawY, drawXLength, drawYLength);
-
-                ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
-                ctx.lineWidth = 2 / scale;
-                ctx.strokeRect(featureDrawX, featureDrawY, drawXLength, drawYLength);
-
-                // Internal Details 
-                if (scale > 0.5) {
-                    const detailSize = S * 0.4;
-                    const detailHalf = detailSize / 2;
-                    
-                    if (obj.type === 'research') {
-                        ctx.fillStyle = '#E32636'; // Red
-                        ctx.fillRect(-detailHalf, -detailHalf, detailSize, detailSize);
-                    } else if (obj.type === 'smelter' || obj.type === 'tesla') { 
-                        ctx.fillStyle = '#1e90ff'; // Blue
-                        ctx.fillRect(-detailHalf, -detailHalf, detailSize, detailSize);
-                    }
+                // Draw a clear boundary for ghosting/floor visualization
+                if (isGhost) {
+                    ctx.strokeStyle = '#FFFFFF';
+                    ctx.lineWidth = 4 / scale;
+                    ctx.strokeRect(-halfS, -halfS, S, S);
+                } else if (obj.type === 'tiled_floor') {
+                    // Draw a subtle border for floor tiles
+                    ctx.strokeStyle = '#444444';
+                    ctx.lineWidth = 1 / scale;
+                    ctx.strokeRect(-halfS, -halfS, S, S);
                 }
-            } 
-            // --- 1x1 Feature Drawing (Circles/Ovals/Squares) ---
-            else { 
-                
-                // --- CIRCLE/OVAL SHAPES ---
-                if (config.shapeType === 'circle' || config.shapeType === 'oval') {
-                    
-                    const radius = halfS * 0.9; 
-                    let radiusX = radius;
-                    let radiusY = radius;
-                    
-                    // Specific dimensions for Oval (Bag)
-                    if (config.shapeType === 'oval') {
-                        radiusX = halfS * 0.8; 
-                        radiusY = halfS * 0.45;
-                    }
-                    
+
+            } else {
+
+                // --- SHAPE DRAWING LOGIC (The original implementation fallback) ---
+
+                if (config.shapeType === 'rectangle') {
+                    // --- 3x1 Feature Drawing (Rectangle) ---
+                    const totalLengthPixels = S * config.length;
+                    const totalWidthPixels = S * config.widthRatio;
+
+                    const drawXLength = totalWidthPixels;
+                    const drawYLength = totalLengthPixels;
+
+                    const featureDrawX = -drawXLength / 2;
+                    const featureDrawY = -drawYLength / 2;
+
                     ctx.fillStyle = config.color;
-                    ctx.beginPath();
-                    
-                    if (config.shapeType === 'circle') {
-                        ctx.arc(0, 0, radius, 0, 2 * Math.PI); 
-                    } else { // oval
-                         ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, 2 * Math.PI);
-                    }
-                    
-                    ctx.fill();
+                    ctx.fillRect(featureDrawX, featureDrawY, drawXLength, drawYLength);
 
                     ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
                     ctx.lineWidth = 2 / scale;
-                    ctx.beginPath();
-                    
-                    if (config.shapeType === 'circle') {
-                        ctx.arc(0, 0, radius, 0, 2 * Math.PI); 
-                    } else { // oval
-                         ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, 2 * Math.PI);
-                    }
-                    ctx.stroke();
+                    ctx.strokeRect(featureDrawX, featureDrawY, drawXLength, drawYLength);
 
-                }
-                
-                // --- FRIDGE (Half Block - Special Case) ---
-                else if (obj.type === 'fridge' && config.shapeType === 'half-square') {
-                    // Draw the shape starting from the center of the cell and extending to the 'left' half 
-                    // This area [-halfS, 0] along the local X-axis rotates with the context.
-                    ctx.fillStyle = config.color;
-                    ctx.fillRect(-halfS, -halfS, halfS, S); 
-
-                    ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
-                    ctx.lineWidth = 2 / scale;
-                    ctx.strokeRect(-halfS, -halfS, S, S); // Stroke the full cell boundary
-                }
-
-                // --- TILED FLOOR ---
-                else if (obj.type === 'tiled_floor') {
-                    ctx.fillStyle = config.color;
-                    ctx.fillRect(-halfS, -halfS, S, S); 
-                    
+                    // Internal Details
                     if (scale > 0.5) {
-                        drawTiledFloorDetail(S, isGhost);
+                        const detailSize = S * 0.4;
+                        const detailHalf = detailSize / 2;
+
+                        if (obj.type === 'research') {
+                            ctx.fillStyle = '#E32636'; // Red
+                            ctx.fillRect(-detailHalf, -detailHalf, detailSize, detailSize);
+                        } else if (obj.type === 'smelter' || obj.type === 'tesla') {
+                            ctx.fillStyle = '#1e90ff'; // Blue
+                            ctx.fillRect(-detailHalf, -detailHalf, detailSize, detailSize);
+                        }
                     }
 
-                    ctx.strokeStyle = isGhost ? '#AAAAAA' : '#444444'; 
-                    ctx.lineWidth = 2 / scale;
-                    ctx.strokeRect(-halfS, -halfS, S, S);
                 }
-                
-                // --- SQUARE BLOCKS (Wall, Door, Unknown) ---
-                else { 
-                    ctx.fillStyle = config.color;
-                    ctx.fillRect(-halfS, -halfS, S, S); 
 
-                    if (obj.type === 'metal_door' && scale > 0.5) {
-                        // Draw red hinge detail.
-                        // Defined at the bottom-left corner of the cell (relative to the rotated context).
-                        const detailSize = S * 0.3; 
-                        const detailX = -halfS; // Left edge
-                        const detailY = halfS - detailSize; // Bottom edge
-                        // Used a brighter color to ensure rotation visibility
-                        ctx.fillStyle = '#FF4500'; 
-                        ctx.fillRect(detailX, detailY, detailSize, detailSize); 
+                // --- 1x1 Feature Drawing (Circles/Ovals/Squares) ---
+                else {
+                    // --- CIRCLE/OVAL SHAPES ---
+                    if (config.shapeType === 'circle' || config.shapeType === 'oval') {
+                        const radius = halfS * 0.9;
+                        let radiusX = radius;
+                        let radiusY = radius;
+
+                        // Specific dimensions for Oval (Bag)
+                        if (config.shapeType === 'oval') {
+                            radiusX = halfS * 0.8;
+                            radiusY = halfS * 0.45;
+                        }
+
+                        ctx.fillStyle = config.color;
+                        ctx.beginPath();
+                        if (config.shapeType === 'circle') {
+                            ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+                        } else { // oval
+                            ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                        }
+                        ctx.fill();
+
+                        ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
+                        ctx.lineWidth = 2 / scale;
+                        ctx.beginPath();
+                        if (config.shapeType === 'circle') {
+                            ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+                        } else { // oval
+                            ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                        }
+                        ctx.stroke();
                     }
 
-                    ctx.strokeStyle = isGhost ? '#AAAAAA' : (obj.type === 'metal_wall' ? '#333333' : '#444444'); 
-                    
-                    if (obj.type === 'unknown') {
-                         ctx.strokeStyle = isGhost ? 'rgba(255, 0, 0, 0.5)' : '#FF0000'; // Red outline for unknown blocks
+                    // --- FRIDGE (Half Block - Special Case) ---
+                    else if (obj.type === 'fridge' && config.shapeType === 'half-square') {
+                        // Draw the shape starting from the center of the cell and extending to the 'left' half
+                        // This area [-halfS, 0] along the local X-axis rotates with the context.
+                        ctx.fillStyle = config.color;
+                        ctx.fillRect(-halfS, -halfS, halfS, S);
+
+                        ctx.strokeStyle = isGhost ? '#AAAAAA' : '#FFFFFF';
+                        ctx.lineWidth = 2 / scale;
+                        ctx.strokeRect(-halfS, -halfS, S, S); // Stroke the full cell boundary
                     }
-                    
-                    ctx.lineWidth = 2 / scale;
-                    ctx.strokeRect(-halfS, -halfS, S, S);
+
+                    // --- TILED FLOOR ---
+                    else if (obj.type === 'tiled_floor') {
+                        ctx.fillStyle = config.color;
+                        ctx.fillRect(-halfS, -halfS, S, S);
+
+                        if (scale > 0.5) {
+                            drawTiledFloorDetail(S, isGhost);
+                        }
+
+                        ctx.strokeStyle = isGhost ? '#AAAAAA' : '#444444';
+                        ctx.lineWidth = 2 / scale;
+                        ctx.strokeRect(-halfS, -halfS, S, S);
+                    }
+
+                    // --- SQUARE BLOCKS (Wall, Door, Unknown) ---
+                    else {
+                        ctx.fillStyle = config.color;
+                        ctx.fillRect(-halfS, -halfS, S, S);
+
+                        if (obj.type === 'metal_door' && scale > 0.5) {
+                            // Draw red hinge detail.
+                            // Defined at the bottom-left corner of the cell (relative to the rotated context).
+                            const detailSize = S * 0.3;
+                            const detailX = -halfS; // Left edge
+                            const detailY = halfS - detailSize; // Bottom edge
+
+                            // Used a brighter color to ensure rotation visibility
+                            ctx.fillStyle = '#FF4500';
+                            ctx.fillRect(detailX, detailY, detailSize, detailSize);
+                        }
+
+                        ctx.strokeStyle = isGhost ? '#AAAAAA' : (obj.type === 'metal_wall' ? '#333333' : '#444444');
+                        if (obj.type === 'unknown') {
+                            ctx.strokeStyle = isGhost ? 'rgba(255, 0, 0, 0.5)' : '#FF0000'; // Red outline for unknown blocks
+                        }
+                        ctx.lineWidth = 2 / scale;
+                        ctx.strokeRect(-halfS, -halfS, S, S);
+                    }
                 }
             }
-            
-            ctx.restore();
-            
-            // Reset global alpha after drawing the feature
-            ctx.globalAlpha = 1.0; 
-        }
 
+            ctx.restore();
+
+            if (isGhost) {
+                ctx.globalAlpha = 1.0;
+            }
+        }
 
         /**
          * Draws a line of ghost features for LINE mode or the clone preview.
@@ -437,17 +461,16 @@
                     ctx.fillStyle = 'rgba(255, 255, 0, 0.2)'; // Semi-transparent yellow for selection
                     ctx.fillRect(rectX, rectY, rectW, rectH);
                 }
-                
+
                 ctx.strokeStyle = isDeletion ? 'red' : 'yellow';
                 ctx.lineWidth = 2 / scale;
                 ctx.strokeRect(rectX, rectY, rectW, rectH);
                 return;
             }
 
-
             // Draw actual features for LINE mode
             const isHorizontal = Math.abs(end.col - start.col) >= Math.abs(end.row - start.row);
-            
+
             if (isHorizontal) {
                 // Horizontal line (rows are the same or minimal change)
                 const fixedRow = Math.round((start.row + end.row) / 2);
@@ -468,10 +491,6 @@
          */
         function drawGrid() {
             if (!ctx) return;
-            
-            // Determine the opacity for special objects
-            const specialObjectOpacity = isFloorLayerVisible ? 0.15 : 1.0;
-            updateLayerViewDisplay(); // Update the UI text
 
             // 1. Clear the canvas and fill the background
             ctx.fillStyle = BACKGROUND_COLOR;
@@ -488,22 +507,20 @@
             ctx.fillRect(0, 0, baseSize, baseSize);
 
             ctx.strokeStyle = GRID_LINE_COLOR;
-            ctx.lineWidth = 1 / scale; 
+            ctx.lineWidth = 1 / scale;
+
             for (let i = 0; i <= GRID_SIZE; i++) {
                 const position = i * originalCellSize;
                 ctx.beginPath(); ctx.moveTo(position, 0); ctx.lineTo(position, baseSize); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(0, position); ctx.lineTo(baseSize, position); ctx.stroke();
             }
 
-            // 3. Draw Floor Objects (always full opacity)
+            // 3. Draw Floor Objects
             floorObjects.forEach(obj => {
-                drawFeature(obj, originalCellSize, scale, false, 1.0);
+                drawFeature(obj, originalCellSize, scale, false);
             });
-            
-            // 4. Draw Ghost Previews (Action or Single Placement)
-            // Ghost previews should not use the layer opacity, they should be a constant transparency (0.33)
-            // The isGhost flag in drawFeature handles this, which overrides the opacity parameter.
 
+            // 4. Draw Ghost Previews (Action or Single Placement)
             // A. Drag Action Preview (Line, Delete, Clone Selection)
             if (isDraggingForAction && dragStartCell && dragCurrentCell) {
                 if (currentMode === MODES.LINE) {
@@ -517,20 +534,19 @@
 
             // B. Single Placement Ghost / Clone Placement Ghost
             else if (!isDraggingForAction && ghostRow >= 0 && ghostCol >= 0) {
-                 if (currentMode === MODES.CLONE && clonedArea !== null) {
+                if (currentMode === MODES.CLONE && clonedArea !== null) {
                     // Draw CLONE Placement Ghost
                     clonedArea.data.forEach(item => {
                         const targetRow = ghostRow + item.offsetY;
                         const targetCol = ghostCol + item.offsetX;
-                        // Use isGhost = true for the placement preview
-                        drawFeature({ 
-                            type: item.type, 
-                            row: targetRow, 
-                            col: targetCol, 
-                            rotation: item.rotation 
-                        }, originalCellSize, scale, true); 
+                        drawFeature({
+                            type: item.type,
+                            row: targetRow,
+                            col: targetCol,
+                            rotation: item.rotation
+                        }, originalCellSize, scale, true);
                     });
-                 } else if (currentMode !== MODES.DELETE) {
+                } else if (currentMode !== MODES.DELETE) {
                     // Draw normal single ghost (only if not in DELETE mode)
                     const rotation = isDirectional(selectedObjectType) ? ghostRotation : 0;
                     const ghostObject = {
@@ -539,14 +555,13 @@
                         col: ghostCol,
                         rotation: rotation
                     };
-                    drawFeature(ghostObject, originalCellSize, scale, true); // Use isGhost = true
-                 }
+                    drawFeature(ghostObject, originalCellSize, scale, true);
+                }
             }
 
-
-            // 5. Draw Placed Special Objects (with layer-controlled opacity)
+            // 5. Draw Placed Special Objects
             specialObjects.forEach(obj => {
-                drawFeature(obj, originalCellSize, scale, false, specialObjectOpacity);
+                drawFeature(obj, originalCellSize, scale, false);
             });
 
             ctx.restore();
@@ -562,12 +577,12 @@
             if (currentMode === MODES.CLONE && newMode !== MODES.CLONE) {
                 clonedArea = null;
             }
-            
+
             currentMode = newMode;
             // Clear drag state
             dragStartCell = null;
             isDraggingForAction = false;
-            
+
             // Update button styles
             document.querySelectorAll('.mode-btn').forEach(btn => {
                 btn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'text-gray-900', 'ring-2', 'ring-yellow-300');
@@ -579,7 +594,7 @@
                 activeBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600', 'text-white');
                 activeBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-gray-900', 'ring-2', 'ring-yellow-300');
             }
-            
+
             // Update mode display text
             let modeText;
             switch (newMode) {
@@ -606,7 +621,7 @@
             const endY = Math.max(start.row, end.row);
 
             const isHorizontal = Math.abs(end.col - start.col) >= Math.abs(end.row - start.row);
-            
+
             // This is the correct rotation for all directional objects
             const objRotation = isDirectional(objectType) ? rotation : 0;
 
@@ -629,8 +644,8 @@
                     for (let c = startX; c <= endX; c++) {
                         const isOccupied = specialObjects.some(obj => obj.row === fixedRow && obj.col === c);
                         if (!isOccupied) {
-                            specialObjects.push({ 
-                                type: objectType, row: fixedRow, col: c, id: KNOWN_INTEGER_IDS[objectType], rotation: objRotation 
+                            specialObjects.push({
+                                type: objectType, row: fixedRow, col: c, id: KNOWN_INTEGER_IDS[objectType], rotation: objRotation
                             });
                         }
                     }
@@ -638,14 +653,15 @@
                     const fixedCol = Math.round((start.col + end.col) / 2);
                     for (let r = startY; r <= endY; r++) {
                         const isOccupied = specialObjects.some(obj => obj.row === r && obj.col === fixedCol);
-                         if (!isOccupied) {
-                            specialObjects.push({ 
-                                type: objectType, row: r, col: fixedCol, id: KNOWN_INTEGER_IDS[objectType], rotation: objRotation 
+                        if (!isOccupied) {
+                            specialObjects.push({
+                                type: objectType, row: r, col: fixedCol, id: KNOWN_INTEGER_IDS[objectType], rotation: objRotation
                             });
                         }
                     }
                 }
             }
+
             updateBlockCount(); // Update counter after placement
         }
 
@@ -660,14 +676,14 @@
             const endX = Math.max(start.col, end.col);
             const endY = Math.max(start.row, end.row);
 
-            specialObjects = specialObjects.filter(obj => 
+            specialObjects = specialObjects.filter(obj =>
                 !(obj.col >= startX && obj.col <= endX && obj.row >= startY && obj.row <= endY)
             );
 
-            floorObjects = floorObjects.filter(obj => 
+            floorObjects = floorObjects.filter(obj =>
                 !(obj.col >= startX && obj.col <= endX && obj.row >= startY && obj.row <= endY)
             );
-            
+
             updateBlockCount(); // Update counter after deletion
         }
 
@@ -709,10 +725,9 @@
                 clonedArea = null;
                 document.getElementById('current-mode-display').textContent = 'Clone (Selection)';
             }
-            
-            drawGrid(); 
+            drawGrid();
         }
-        
+
         /**
          * Places the stored clonedArea at the given cell.
          */
@@ -729,7 +744,7 @@
                     col: targetCol,
                     id: item.id,
                     // Use the rotation stored during selection
-                    rotation: item.rotation 
+                    rotation: item.rotation
                 };
 
                 // Check bounds
@@ -757,25 +772,25 @@
         }
 
         // --- Core Event Handlers ---
-        
+
         /**
          * Calculates the size of the square canvas based on the viewport.
          */
         function updateBaseSize() {
-            const padding = 80; 
+            const padding = 80;
             let size = Math.min(window.innerWidth, window.innerHeight) - padding;
             baseSize = Math.max(size, 300);
             canvas.width = baseSize;
             canvas.height = baseSize;
         }
-        
+
         /**
          * Handles the mouse wheel event for zooming in and out.
          */
         function handleWheel(event) {
             event.preventDefault();
 
-            const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1; 
+            const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1;
             const newScale = Math.max(0.1, Math.min(scale * zoomFactor, 10.0)); // Clamp scale
 
             const rect = canvas.getBoundingClientRect();
@@ -791,6 +806,7 @@
             panY = mouseY - worldY * newScale;
 
             scale = newScale;
+
             drawGrid();
         }
 
@@ -807,12 +823,12 @@
             const cell = getCellFromScreenCoords(event.clientX - rect.left, event.clientY - rect.top);
 
             if (event.button === 1) { // Middle Click (for panning)
-                event.preventDefault(); 
+                event.preventDefault();
                 canvas.style.cursor = 'grabbing';
                 lastPanX = event.clientX;
                 lastPanY = event.clientY;
-            } 
-            
+            }
+
             if (event.button === 0 && cell) { // Left Click for action modes
                 isDraggingForAction = true;
                 dragStartCell = cell;
@@ -821,7 +837,7 @@
 
             ghostRow = -1;
             ghostCol = -1;
-            drawGrid(); 
+            drawGrid();
         }
 
         function handleMouseUp(event) {
@@ -830,11 +846,11 @@
 
             const rect = canvas.getBoundingClientRect();
             // Fallback for event if it's null (e.g., from mouseleave handler)
-            const clientX = event ? event.clientX : clickStartX; 
+            const clientX = event ? event.clientX : clickStartX;
             const clientY = event ? event.clientY : clickStartY;
-            
+
             const cell = getCellFromScreenCoords(clientX - rect.left, clientY - rect.top);
-            
+
             if (isDraggingForAction && cell && dragStartCell) {
                 // Finalize action for drag modes
                 if (currentMode === MODES.LINE) {
@@ -846,12 +862,13 @@
                     handleCloneSelection(dragStartCell, cell);
                 }
             }
-            
+
             isDragging = false;
             isDraggingForAction = false;
             dragStartCell = null;
             dragCurrentCell = null;
             canvas.style.cursor = 'grab';
+
             drawGrid();
         }
 
@@ -862,35 +879,36 @@
             const rect = canvas.getBoundingClientRect();
             const mouseX = event.clientX - rect.left;
             const mouseY = event.clientY - rect.top;
+
             const cell = getCellFromScreenCoords(mouseX, mouseY);
 
             if (isDragging) {
-                const isMiddleButtonDown = event.buttons & 4; 
-                
+                const isMiddleButtonDown = event.buttons & 4;
                 if (isMiddleButtonDown) {
                     // Panning
                     const dx = event.clientX - lastPanX;
                     const dy = event.clientY - lastPanY;
+
                     panX += dx;
                     panY += dy;
+
                     lastPanX = event.clientX;
                     lastPanY = event.clientY;
-                    isPanning = true; 
+                    isPanning = true;
                 } else if (event.buttons & 1) {
                     // Left button held down - check for drag to prevent click placement (only applies to CLICK mode)
                     const totalDistMoved = Math.hypot(event.clientX - clickStartX, event.clientY - clickStartY);
                     if (totalDistMoved > DRAG_THRESHOLD) {
-                        isPanning = true; 
+                        isPanning = true;
                     }
-                    
+
                     // Update dragCurrentCell for drag action previews (LINE, DELETE, CLONE_SELECT)
                     if (isDraggingForAction && cell) {
                         dragCurrentCell = cell;
                     }
                 }
-                
+
                 drawGrid();
-                
             } else {
                 // Not dragging, update ghost position
                 if (cell && (cell.row !== ghostRow || cell.col !== ghostCol)) {
@@ -908,33 +926,27 @@
         function handleKeyDown(event) {
             // Do not handle controls if the help modal is open, except for 'H'
             if (helpModalOverlay.classList.contains('visible') && event.key.toLowerCase() !== 'h') return;
-            
-            const panSpeed = 30; 
+
+            const panSpeed = 30;
             let moved = false;
-            const distance = panSpeed / scale; 
+            const distance = panSpeed / scale;
 
             switch (event.key.toLowerCase()) {
                 case 'w': panY += distance; moved = true; break;
                 case 's': panY -= distance; moved = true; break;
                 case 'a': panX += distance; moved = true; break;
                 case 'd': panX -= distance; moved = true; break;
-                
-                case 'r': 
-                    event.preventDefault(); 
+                case 'r':
+                    event.preventDefault();
                     // Only allow rotation if the currently selected item is directional
                     if (isDirectional(selectedObjectType)) {
-                        ghostRotation = (ghostRotation + 90) % 360; 
-                        moved = true; 
+                        ghostRotation = (ghostRotation + 90) % 360;
+                        moved = true;
                     }
                     break;
                 case 'h':
                     event.preventDefault();
                     toggleHelpModal();
-                    break;
-                case 'g': // Toggle Floor Layer View (NEW)
-                    event.preventDefault();
-                    isFloorLayerVisible = !isFloorLayerVisible;
-                    moved = true;
                     break;
             }
 
@@ -952,8 +964,8 @@
                 return;
             }
 
-            const cell = getCellFromScreenCoords(event.clientX - canvas.getBoundingClientRect().left, 
-                                                event.clientY - canvas.getBoundingClientRect().top);
+            const cell = getCellFromScreenCoords(event.clientX - canvas.getBoundingClientRect().left,
+                event.clientY - canvas.getBoundingClientRect().top);
 
             if (!cell) return;
 
@@ -969,7 +981,7 @@
                 if (!config) return;
 
                 let placementMade = false;
-                
+
                 // Determine rotation for placement (uses the current ghost rotation)
                 const objRotation = isDirectional(selectedObjectType) ? ghostRotation : 0;
 
@@ -989,345 +1001,11 @@
                     const isOccupied = specialObjects.some(obj => obj.row === cell.row && obj.col === cell.col);
 
                     if (!isOccupied) {
-                        let newId = KNOWN_INTEGER_IDS[selectedObjectType] || 0; 
-
+                        let newId = KNOWN_INTEGER_IDS[selectedObjectType] || 0;
                         specialObjects.push({
-                            type: selectedObjectType, row: cell.row, col: cell.col, id: newId, rotation: objRotation 
+                            type: selectedObjectType, row: cell.row, col: cell.col, id: newId, rotation: objRotation
                         });
                         placementMade = true;
                     } else {
                         // Remove if already occupied (simple toggle)
-                        specialObjects = specialObjects.filter(obj => 
-                            !(obj.row === cell.row && obj.col === cell.col)
-                        );
-                        placementMade = true;
-                    }
-                }
-
-                if (placementMade) {
-                    updateBlockCount(); // Update counter after placement/removal
-                    drawGrid();
-                }
-            }
-        }
-
-        function generateMapCode() {
-            const rotationToCode = { 0: 0, 90: 1, 180: 2, 270: 3 };
-            // Ensure unknown IDs are also exported correctly
-            const allObjects = [...floorObjects, ...specialObjects]; 
-
-            const codeString = allObjects.map(obj => {
-                const id = obj.id;
-                const x = obj.col; 
-                const y = obj.row; 
-                // Use the rotation code (0-3) or default to 0
-                const r = rotationToCode[obj.rotation] !== undefined ? rotationToCode[obj.rotation] : 0; 
-                return `!b=${id}:${x}:${y}:${r}`;
-            }).join(''); 
-            
-            document.getElementById('map-code-output').value = codeString;
-            document.getElementById('code-output-container').classList.remove('hidden');
-            document.getElementById('code-output-container').scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        /**
-         * Parses the map code string and updates the global map arrays.
-         */
-        function loadMapFromCode() {
-            const code = document.getElementById('map-code-input').value;
-
-            // Clear existing objects
-            specialObjects = [];
-            floorObjects = [];
-            
-            // Regex to find all block definitions: !b=ID:X:Y:R
-            const blockRegex = /!b=(\d+):(\d+):(\d+):(\d+)/g;
-            let match;
-            let blocksLoaded = 0;
-            let unknownBlocksCount = 0;
-
-            const rotationCodeToDegrees = { 0: 0, 1: 90, 2: 180, 3: 270 };
-
-            while ((match = blockRegex.exec(code)) !== null) {
-                const id = parseInt(match[1]);
-                const col = parseInt(match[2]);
-                const row = parseInt(match[3]);
-                const rotationCode = parseInt(match[4]);
-                
-                // Skip if outside grid bounds
-                if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) continue;
-                
-                let objectType = ID_TO_TYPE[id];
-                let rotation = rotationCodeToDegrees[rotationCode] || 0; 
-                
-                // Handle Unknown ID
-                if (!objectType) {
-                    objectType = 'unknown';
-                    unknownBlocksCount++;
-                }
-                
-                const newObject = {
-                    type: objectType,
-                    row: row,
-                    col: col,
-                    id: id, 
-                    rotation: rotation
-                };
-                
-                // Decide if it's a floor tile or a special feature
-                if (newObject.type === 'tiled_floor') {
-                     floorObjects.push(newObject);
-                } else {
-                     specialObjects.push(newObject);
-                }
-                
-                blocksLoaded++;
-            }
-
-            if (blocksLoaded > 0) {
-                // Reset pan and zoom to show the overall map better
-                scale = 1.0;
-                panX = 0;
-                panY = 0;
-                drawGrid();
-                updateBlockCount(); // Update counter after loading
-                clonedArea = null; 
-                
-                let message = `Successfully loaded ${blocksLoaded} blocks.`;
-                if (unknownBlocksCount > 0) {
-                    message += ` Found **${unknownBlocksCount} unknown block IDs** which are displayed as solid black squares.`;
-                }
-                console.log(message);
-            } else {
-                console.warn('No valid blocks found in the pasted code.');
-            }
-        }
-
-        function copyCode() {
-            const output = document.getElementById('map-code-output');
-            output.select();
-            output.setSelectionRange(0, 99999); 
-            
-            try {
-                // Use document.execCommand('copy') for better compatibility in iFrames
-                document.execCommand('copy');
-            } catch (err) {
-                console.error('Failed to copy code', err);
-            }
-        }
-
-        function handleItemChange(event) {
-            selectedObjectType = event.target.value;
-            
-            // Clear clone data if selected item changes
-            if (currentMode === MODES.CLONE) {
-                clonedArea = null;
-                setMode(MODES.CLONE); // Re-set mode to update display text to "Selection"
-            }
-            drawGrid();
-        }
-        
-        // --- Help Modal Logic ---
-
-        /**
-         * Toggles the visibility of the help modal.
-         */
-        window.toggleHelpModal = () => {
-            const isVisible = helpModalOverlay.classList.toggle('visible');
-            if (!isVisible) {
-                 // When hiding, set the overlay to hidden after the transition completes
-                setTimeout(() => {
-                    helpModalOverlay.classList.add('hidden');
-                }, 300);
-            } else {
-                // When showing, remove hidden class immediately
-                helpModalOverlay.classList.remove('hidden');
-            }
-        };
-
-
-        function init() {
-            canvas = document.getElementById('gridCanvas');
-            ctx = canvas.getContext('2d');
-            helpModalOverlay = document.getElementById('helpModalOverlay');
-            helpModal = document.getElementById('helpModal');
-            layerViewDisplay = document.getElementById('current-layer-view'); // Get the new element
-
-
-            updateBaseSize();
-            
-            // Initialize mode to CLICK
-            setMode(MODES.CLICK); 
-            
-            drawGrid();
-            updateBlockCount(); // Initial count on load
-
-            // Setup Event Listeners
-            window.addEventListener('resize', () => {
-                updateBaseSize();
-                drawGrid();
-            });
-
-            // Re-adding all core map editor listeners
-            canvas.addEventListener('wheel', handleWheel);
-            canvas.addEventListener('mousedown', handleMouseDown);
-            canvas.addEventListener('mouseup', handleMouseUp);
-            canvas.addEventListener('mouseleave', () => {
-                handleMouseUp(null); // Pass null event to indicate mouseleave
-                ghostRow = -1;
-                ghostCol = -1;
-                drawGrid();
-            });
-            canvas.addEventListener('mousemove', handleMouseMove);
-            canvas.addEventListener('click', handleCanvasClick);
-            document.addEventListener('keydown', handleKeyDown); 
-
-            // Initialize buttons and dropdown
-            document.getElementById('generate-code-btn').addEventListener('click', generateMapCode);
-            document.getElementById('copy-code-btn').addEventListener('click', copyCode);
-            document.getElementById('load-map-btn').addEventListener('click', loadMapFromCode); 
-
-            const select = document.getElementById('item-select');
-            select.innerHTML = ''; 
-            for (const key in OBJECT_CONFIGS) {
-                // Exclude the 'unknown' block from the manual selection dropdown
-                if (key !== 'unknown') {
-                    const option = document.createElement('option');
-                    option.value = key;
-                    option.textContent = OBJECT_CONFIGS[key].name;
-                    select.appendChild(option);
-                }
-            }
-            select.value = selectedObjectType; 
-            select.addEventListener('change', handleItemChange);
-
-            document.getElementById('mode-btn-click').addEventListener('click', () => setMode(MODES.CLICK));
-            document.getElementById('mode-btn-line').addEventListener('click', () => setMode(MODES.LINE));
-            document.getElementById('mode-btn-clone').addEventListener('click', () => {
-                if (currentMode === MODES.CLONE && clonedArea !== null) {
-                    // If in clone placement mode, clicking clone button resets selection and stays in clone selection mode
-                    clonedArea = null;
-                    drawGrid();
-                }
-                setMode(MODES.CLONE);
-            });
-            document.getElementById('mode-btn-delete').addEventListener('click', () => setMode(MODES.DELETE));
-            
-            // Initial modal display
-            helpModalOverlay.classList.add('visible');
-            helpModalOverlay.classList.remove('hidden');
-        }
-
-        // Run the initialization once the DOM is fully loaded
-        window.onload = init;
-    </script>
-</head>
-<body class="flex flex-col items-center justify-start h-screen">
-
-    <div class="app-container">
-        <div class="text-white text-center mb-4 mt-4 relative w-full max-w-7xl">
-            <h1 id="main-title" class="text-3xl font-bold text-white mb-2 shadow-lg p-2 rounded-lg bg-indigo-700/50">
-                Devast Base Editor
-            </h1>
-            <p class="text-sm text-gray-400 mb-1">
-                Current Mode: <span id="current-mode-display" class="font-semibold text-yellow-400">Click (Single Place/Toggle)</span>. Press **H** for help/controls.
-            </p>
-             <p class="text-sm text-gray-400">
-                Layer View: <span id="current-layer-view" class="font-semibold">Full View (Normal) - Press G</span>
-            </p>
-            
-            <div class="absolute top-0 right-0 p-3 bg-gray-700/50 rounded-lg shadow-xl backdrop-blur-sm flex flex-col items-stretch space-y-2 max-w-xs md:max-w-none">
-                
-                <div class="p-2 bg-gray-600 rounded-md text-sm font-semibold text-center text-white border border-gray-500">
-                    Total Blocks: <span id="block-count" class="text-yellow-300">0</span>
-                </div>
-
-                <label for="item-select" class="text-xs text-gray-200 block mt-2">Place Feature:</label>
-                <select id="item-select" class="p-2 text-sm bg-gray-800 text-white border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-150" onchange="handleItemChange(event)">
-                    </select>
-                
-                <div class="flex justify-between space-x-2 p-1 bg-gray-800 rounded-md">
-                    <button id="mode-btn-click" class="mode-btn" title="Click Mode (Single Place/Toggle)">
-                        🖱️
-                    </button>
-                    <button id="mode-btn-line" class="mode-btn" title="Line Mode (Drag to Place)">
-                        📏
-                    </button>
-                    <button id="mode-btn-clone" class="mode-btn" title="Clone Mode (Drag to Select Area, Click to Place)">
-                        📋
-                    </button>
-                    <button id="mode-btn-delete" class="mode-btn" title="Delete Mode (Drag to Erase Area)">
-                        🗑️
-                    </button>
-                </div>
-
-                <button id="generate-code-btn" class="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm rounded-md shadow-lg transition duration-200 transform hover:scale-[1.02]">
-                    Generate Map Code
-                </button>
-
-            </div>
-        </div>
-
-        <div class="flex flex-grow items-center justify-center w-full max-w-full rounded-xl mb-4">
-            <canvas id="gridCanvas"></canvas>
-        </div>
-
-
-        <div id="code-output-container" class="w-full max-w-4xl p-4 bg-gray-800 rounded-lg shadow-2xl mb-8">
-            
-            <h2 class="text-xl font-bold text-gray-100 mb-3">Map Code Interface</h2>
-            
-            <div class="mb-4">
-                <label for="map-code-input" class="text-gray-300 text-sm mb-1 block">Paste Map Code to Load Blocks:</label>
-                <textarea id="map-code-input" rows="3" class="w-full p-3 bg-gray-900 text-yellow-300 border border-gray-700 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Paste your !b=ID:X:Y:R code string here..."></textarea>
-                <button id="load-map-btn" class="mt-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md transition duration-150">
-                    Load Map
-                </button>
-            </div>
-            
-            <hr class="border-gray-700 mb-4">
-
-            <label for="map-code-output" class="text-gray-300 text-sm mb-1 block">Generated Map Code (Export):</label>
-            <textarea id="map-code-output" rows="5" class="w-full p-3 bg-gray-900 text-green-300 border border-gray-700 rounded-md"></textarea>
-            <button id="copy-code-btn" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition duration-150">
-                Copy Code to Clipboard
-            </button>
-        </div>
-
-    </div>
-
-    <div id="helpModalOverlay" class="modal-overlay hidden">
-        <div id="helpModal" class="modal-content bg-gray-800 text-white p-6 rounded-xl shadow-2xl w-full max-w-lg border-2 border-indigo-500">
-            <div class="flex justify-between items-start mb-4">
-                <h2 class="text-2xl font-extrabold text-indigo-400">Base Editor Controls & Modes</h2>
-                <button onclick="toggleHelpModal()" class="text-gray-300 hover:text-white transition duration-150 p-1 rounded-full bg-gray-700 hover:bg-red-600 focus:outline-none">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-
-            <div class="border-t border-indigo-700 pt-4 space-y-4">
-                <h3 class="text-xl font-semibold text-indigo-300">Navigation</h3>
-                <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
-                    <li>**Zoom**: Use the **Scroll Wheel** (or pinch on touch devices).</li>
-                    <li>**Pan/Move**: Use **WASD** keys or **Middle Mouse Click & Drag**.</li>
-                    <li>**Rotate Ghost Preview**: Press **R** to rotate the object ghost before placing (only for applicable items like 3x1 features, **Fridge**, **Door**, or **Bag**).</li>
-                    <li>**Toggle Floor View**: Press **G** to switch between **Full View** and **Floor Layer** (Special objects are almost transparent).</li>
-                    <li>**Toggle Help**: Press **H** to show/hide this modal.</li>
-                </ul>
-
-                <h3 class="text-xl font-semibold text-indigo-300">Placement Modes</h3>
-                <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
-                    <li>**Click (🖱️)**: Single click to place or remove the selected object.</li>
-                    <li>**Line (📏)**: Click and drag to quickly place objects in a straight line (horizontal or vertical).</li>
-                    <li>**Clone (📋)**: First drag a box to select an area, then click to place the copy of that area.</li>
-                    <li>**Delete (🗑️)**: Click and drag a box to delete all objects within that area.</li>
-                </ul>
-            </div>
-            
-            <div class="mt-6 text-center text-sm text-gray-500 border-t border-gray-700 pt-3">
-                <p>The base grid is **149x149**. Start building by closing this window!</p>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
+                        specialObjects
