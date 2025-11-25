@@ -255,17 +255,15 @@
         */
         function updateRotationDisplay() {
             const btn = document.getElementById('rotate-btn');
-            const isClonePlacement = currentMode === MODES.CLONE && clonedArea !== null;
-
             if (btn) {
-                if (isDirectional(selectedObjectType) || isClonePlacement) {
-                    // Show the rotation and make it clickable if directional OR if in clone placement mode
+                if (isDirectional(selectedObjectType)) {
+                    // Show the rotation and make it clickable
                     btn.textContent = `${ghostRotation}°`;
                     btn.classList.remove('bg-gray-400', 'text-gray-900', 'cursor-default');
                     btn.classList.add('bg-indigo-500', 'hover:bg-indigo-600', 'text-white', 'cursor-pointer');
                     btn.disabled = false;
                 } else {
-                    // Non-directional and not in clone placement, show as disabled
+                    // Non-directional, show as disabled
                     btn.textContent = '0°';
                     btn.classList.remove('bg-indigo-500', 'hover:bg-indigo-600', 'text-white', 'cursor-pointer');
                     btn.classList.add('bg-gray-400', 'text-gray-900', 'cursor-default');
@@ -278,18 +276,10 @@
          * Rotates the ghost object by 90 degrees and updates the display.
         */
         function toggleRotation() {
-            const isClonePlacement = currentMode === MODES.CLONE && clonedArea !== null;
-            const isSinglePlacement = isDirectional(selectedObjectType);
-
-            // Allow rotation if the selected object is directional OR if we are in the clone placement mode
-            if (isSinglePlacement || isClonePlacement) {
+            if (isDirectional(selectedObjectType)) {
                 ghostRotation = (ghostRotation + 90) % 360;
-                // DEBUG: Confirm rotation is happening
-                console.log(`Rotation set to ${ghostRotation}°. Mode: ${currentMode}, Cloned: ${clonedArea !== null}`);
                 updateRotationDisplay();
                 drawGrid();
-            } else {
-                 console.log('Rotation blocked: Must select a directional object or be in Clone Placement mode.');
             }
         }
 
@@ -621,44 +611,17 @@
             else if (!isDraggingForAction && ghostRow >= 0 && ghostCol >= 0) {
                 if (currentMode === MODES.CLONE && clonedArea !== null) {
   
-                    // Draw CLONE Placement Ghost with Rotation
-                    const rotationDegrees = ghostRotation;
-                    const W = clonedArea.width;
-                    const H = clonedArea.height;
-  
+                    // Draw CLONE Placement Ghost
                     clonedArea.data.forEach(item => {
-                        let itemOffsetX = item.offsetX;
-                        let itemOffsetY = item.offsetY;
-
-                        let rotatedOffsetX = itemOffsetX;
-                        let rotatedOffsetY = itemOffsetY;
-
-                        // Apply Group Rotation to Offsets (Standard Grid Rotation Matrix)
-                        if (rotationDegrees === 90) {
-                            // (x, y) -> (y, W - 1 - x)
-                            rotatedOffsetX = itemOffsetY;
-                            rotatedOffsetY = W - 1 - itemOffsetX;
-                        } else if (rotationDegrees === 180) {
-                            // (x, y) -> (W - 1 - x, H - 1 - y)
-                            rotatedOffsetX = W - 1 - itemOffsetX;
-                            rotatedOffsetY = H - 1 - itemOffsetY;
-                        } else if (rotationDegrees === 270) {
-                            // (x, y) -> (H - 1 - y, x)
-                            rotatedOffsetX = H - 1 - itemOffsetY;
-                            rotatedOffsetY = itemOffsetX;
-                        }
-
-                        const targetRow = ghostRow + rotatedOffsetY;
-                        const targetCol = ghostCol + rotatedOffsetX;
-
-                        // Apply Group Rotation to Item's Individual Rotation
-                        let finalItemRotation = (item.rotation + rotationDegrees) % 360;
-
+                        const targetRow = ghostRow + item.offsetY;
+                        const targetCol = 
+                            ghostCol + item.offsetX;
                         drawFeature({
                             type: item.type,
                             row: targetRow,
+                
                             col: targetCol,
-                            rotation: finalItemRotation
+                            rotation: item.rotation
                         }, originalCellSize, scale, true);
                     });
                 } else if (currentMode !== MODES.DELETE) {
@@ -766,15 +729,19 @@
             const isMinimized = menu.classList.toggle('minimized');
 
             if (isMinimized) {
-                button.innerHTML = '&plus;';
+                button.innerHTML = '&plus;'; 
                 button.classList.remove('bg-red-500');
                 button.classList.add('bg-green-600');
+                button.title = 'Maximize Menu';
             } else {
-                button.innerHTML = '&minus;';
+                button.innerHTML = '&minus;'; 
                 button.classList.remove('bg-green-600');
                 button.classList.add('bg-red-500');
+                button.title = 'Minimize Menu';
             }
         }
+
+        // --- Mode & Clone Logic ---
 
         /**
          * Sets the current mode and updates button styles.
@@ -811,14 +778,12 @@
                 // MODIFIED: Update text for two-tap modes
                 case MODES.LINE: modeText = 'Line (Tap 2 Points)'; break;
                 case MODES.DELETE: modeText = 'Delete (Tap 2 Points)'; break;
-                // MODIFIED: Update text for Clone mode
-                case MODES.CLONE: modeText = clonedArea ? 'Clone (Placement: Tap Target, **Use R or Rotate Button to Rotate Group**)' : 'Clone (Selection: Tap 2 Points)'; break;
+                // SPECIAL CLONE DISPLAY: check if area is selected for placement phase
+                case MODES.CLONE: modeText = clonedArea ? 'Clone (Placement: Tap Target)' : 'Clone (Selection: Tap 2 Points)'; break;
                 default: modeText = 'Unknown';
             }
             document.getElementById('current-mode-display').textContent = modeText;
 
-            // Update rotation button state (important for clone placement mode)
-            updateRotationDisplay(); 
             drawGrid();
         }
 
@@ -833,26 +798,34 @@
             const endY = Math.max(start.row, end.row);
             const isHorizontal = Math.abs(end.col - start.col) >= Math.abs(end.row - start.row);
             // This is the correct rotation for all directional objects
-            const objRotation = isDirectional(objectType) ? rotation : 0;
+            const objRotation = isDirectional(objectType) ?
+                rotation : 0;
 
             if (objectType === 'tiled_floor') {
                 for (let r = startY; r <= endY; r++) {
                     for (let c = startX; c <= endX; c++) {
                         // Place floor tiles in every cell of the bounding box
+     
                         const existingIndex = floorObjects.findIndex(obj => obj.row === r && obj.col === c);
                         if (existingIndex === -1) {
-                            floorObjects.push({ type: objectType, row: r, col: c, id: KNOWN_INTEGER_IDS[objectType], rotation: objRotation });
+                            floorObjects.push({
+                                type: objectType, row: r, col: c, id: KNOWN_INTEGER_IDS[objectType], rotation: 0
+                           
+                            });
                         }
                     }
                 }
             } else {
-                // Feature Placement (Line only for features)
+                // Place standard features along the axis of the drag
                 if (isHorizontal) {
+     
                     const fixedRow = Math.round((start.row + end.row) / 2);
                     for (let c = startX; c <= endX; c++) {
                         const isOccupied = specialObjects.some(obj => obj.row === fixedRow && obj.col === c);
                         if (!isOccupied) {
-                            specialObjects.push({ type: objectType, row: fixedRow, col: c, id: KNOWN_INTEGER_IDS[objectType], rotation: objRotation });
+                            specialObjects.push({
+                                type: objectType, row: fixedRow, col: c, id: KNOWN_INTEGER_IDS[objectType], rotation: objRotation
+                            });
                         }
                     }
                 } else {
@@ -860,16 +833,20 @@
                     for (let r = startY; r <= endY; r++) {
                         const isOccupied = specialObjects.some(obj => obj.row === r && obj.col === fixedCol);
                         if (!isOccupied) {
-                            specialObjects.push({ type: objectType, row: r, col: fixedCol, id: KNOWN_INTEGER_IDS[objectType], rotation: objRotation });
+                            specialObjects.push({
+                                type: objectType, row: r, col: fixedCol, id: KNOWN_INTEGER_IDS[objectType], rotation: objRotation
+                            });
                         }
                     }
                 }
             }
+
             updateBlockCount();
+            // Update counter after placement
         }
 
         /**
-         * Deletes all objects (special and floor) within the bounding box defined by start and end.
+         * Deletes all objects (floor and special) within the drag area.
         */
         function applyLineDeletion(start, end) {
             if (!start || !end) return;
@@ -877,11 +854,10 @@
             const startY = Math.min(start.row, end.row);
             const endX = Math.max(start.col, end.col);
             const endY = Math.max(start.row, end.row);
-
-            specialObjects = specialObjects.filter(obj => 
+            specialObjects = specialObjects.filter(obj =>
                 !(obj.col >= startX && obj.col <= endX && obj.row >= startY && obj.row <= endY)
             );
-            floorObjects = floorObjects.filter(obj => 
+            floorObjects = floorObjects.filter(obj =>
                 !(obj.col >= startX && obj.col <= endX && obj.row >= startY && obj.row <= endY)
             );
             updateBlockCount(); // Update counter after deletion
@@ -901,18 +877,13 @@
             // Copy special objects
             [...specialObjects, ...floorObjects].forEach(obj => {
                 if (obj.col >= startX && obj.col <= endX && obj.row >= startY && obj.row <= endY) {
-                    // Determine the rotation of the object relative to the clone group origin (startX, startY)
-                    let itemRotation = obj.rotation;
-                    // Only care about the object's rotation if it's directional, otherwise default to 0
-                    if (!isDirectional(obj.type)) {
-                        itemRotation = 0; 
-                    }
-
                     copiedItems.push({
                         type: obj.type,
+ 
                         id: obj.id,
-                        rotation: itemRotation, // Use the base rotation, we apply ghostRotation on placement
+                        rotation: obj.rotation,
                         // Calculate offset relative to the top-left corner of the selection
+                 
                         offsetX: obj.col - startX,
                         offsetY: obj.row - startY,
                     });
@@ -923,6 +894,7 @@
                     width: endX - startX + 1,
                     height: endY - startY + 1,
                     data: copiedItems
+       
                 };
             } else {
                 clonedArea = null;
@@ -934,30 +906,590 @@
         */
         function applyClonedArea(targetCell) {
             if (!clonedArea || !targetCell) return;
-            
-            const rotationDegrees = ghostRotation; // Use the current ghost rotation for group placement
-            const degreesToRotationCode = { 0: 0, 1: 90, 2: 180, 3: 270 };
-
-            const W = clonedArea.width;
-            const H = clonedArea.height;
-
             clonedArea.data.forEach(item => {
-                let itemOffsetX = item.offsetX;
-                let itemOffsetY = item.offsetY;
+                const targetRow = targetCell.row + item.offsetY;
+                const targetCol = targetCell.col + item.offsetX;
 
-                let rotatedOffsetX = itemOffsetX;
-                let rotatedOffsetY = itemOffsetY;
+                const newItem = {
+                    type: item.type,
+                
+                    row: targetRow,
+                    col: targetCol,
+                    id: item.id,
+                    // Use the rotation stored during selection
+                    rotation: item.rotation
+      
+                };
 
-                // Apply Group Rotation to Offsets (Standard Grid Rotation Matrix around (0,0))
-                if (rotationDegrees === 90) {
-                    // (x, y) -> (y, W - 1 - x)
-                    rotatedOffsetX = itemOffsetY;
-                    rotatedOffsetY = W - 1 - itemOffsetX;
-                } else if (rotationDegrees === 180) {
-                    // (x, y) -> (W - 1 - x, H - 1 - y)
-                    rotatedOffsetX = W - 1 - itemOffsetX;
-                    rotatedOffsetY = H - 1 - itemOffsetY;
-                } else if (rotationDegrees === 270) {
-                    // (x, y) -> (H - 1 - y, x)
-                    rotatedOffsetX = H - 1 - itemOffsetY;
-                    rotated
+                // Check bounds
+                if (targetRow < 0 || targetRow >= GRID_SIZE || targetCol < 0 || targetCol >= GRID_SIZE) return;
+
+                if (item.type === 'tiled_floor') {
+                    
+                    // Only add if floor cell is empty
+                    const existingIndex = floorObjects.findIndex(obj => obj.row === targetRow && obj.col === targetCol);
+                    if (existingIndex === -1) {
+                        floorObjects.push(newItem);
+              
+                    }
+                } else {
+                    // Only add if feature cell is empty
+                    const isOccupied = specialObjects.some(obj => obj.row === targetRow && obj.col === targetCol);
+                    if (!isOccupied) {
+                        specialObjects.push(newItem);
+                    }
+                }
+            });
+            clonedArea = null;
+            // Reset clone area for new selection
+            // MODIFIED: Switch back to Click mode after placement
+            setMode(MODES.CLICK); 
+            updateBlockCount();
+        }
+
+        // --- Core Event Handlers ---
+        /**
+         * Calculates the size of the square canvas based on the viewport.
+        */
+        function updateBaseSize() {
+            const padding = 80;
+            let size = Math.min(window.innerWidth, window.innerHeight) - padding;
+            baseSize = Math.max(size, 300);
+            canvas.width = baseSize;
+            canvas.height = baseSize;
+        }
+        /**
+         * Handles the mouse wheel event for zooming in and out.
+        */
+        function handleWheel(event) {
+            event.preventDefault();
+            const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1;
+            const newScale = Math.max(0.1, Math.min(scale * zoomFactor, 10.0)); // Clamp scale
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            // Calculate the world coordinates of the mouse position
+            const worldX = (mouseX - panX) / scale;
+            const worldY = (mouseY - panY) / scale;
+            // Adjust pan based on the new scale to keep the mouse point fixed
+            panX = mouseX - worldX * newScale;
+            panY = mouseY - worldY * newScale;
+            scale = newScale;
+            drawGrid();
+        }
+        function handleMouseDown(event) {
+            // Check if the modal is open, if so, prevent interaction with the canvas
+            if (helpModalOverlay.classList.contains('visible')) return;
+            isDragging = true;
+            isPanning = false;
+            clickStartX = event.clientX;
+            clickStartY = event.clientY;
+            const rect = canvas.getBoundingClientRect();
+            const cell = getCellFromScreenCoords(event.clientX - rect.left, event.clientY - rect.top);
+            if (event.button === 1) { // Middle Click (for panning)
+                event.preventDefault();
+                canvas.style.cursor = 'grabbing';
+                lastPanX = event.clientX;
+                lastPanY = event.clientY;
+            } else if (event.button === 0 && cell) { // Left Click
+                // We will rely solely on handleCanvasClick for Line/Clone/Delete actions.
+                // This prevents drag-to-select on desktop, favoring the two-tap method for consistency.
+                const isTwoTapMode = [MODES.LINE, MODES.DELETE, MODES.CLONE].includes(currentMode);
+                if (!isTwoTapMode || (currentMode === MODES.CLONE && clonedArea !== null)) {
+                    // This is the only place where dragging for action still exists (Line/Delete/Clone Selection drag on desktop)
+                    // Since the user is specifically asking to replace drag with click-to-click, 
+                    // we remove drag-to-action entirely for these modes to make it mobile-friendly.
+                    // The drag will only be used for panning now.
+                }
+            }
+        }
+        function handleMouseUp(event) {
+            if (!isDragging) return;
+
+            // Don't register a click/action if we were panning (middle button)
+            if (isPanning && event && event.button === 1) {
+                isPanning = false;
+                canvas.style.cursor = 'grabbing';
+                return;
+            }
+            
+            // REMOVED: Drag-based action execution is now handled by handleCanvasClick for two-tap
+
+            isDragging = false;
+            isDraggingForAction = false;
+            dragStartCell = null;
+            dragCurrentCell = null;
+            canvas.style.cursor = 'grab';
+            drawGrid();
+        }
+        function handleMouseMove(event) {
+            // Check if the modal is open, if so, ignore
+            if (helpModalOverlay.classList.contains('visible')) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            const cell = getCellFromScreenCoords(mouseX, mouseY);
+            if (isDragging) {
+                const isMiddleButtonDown = event.buttons & 4;
+                if (isMiddleButtonDown || (event.buttons & 1 && isPanning)) { // Panning
+                    const dx = event.clientX - lastPanX;
+                    const dy = event.clientY - lastPanY;
+                    panX += dx;
+                    panY += dy;
+                    lastPanX = event.clientX;
+                    lastPanY = event.clientY;
+                    isPanning = true;
+                } else if (event.buttons & 1) { // Left button held down - check for drag to prevent click placement
+                    const totalDistMoved = Math.hypot(event.clientX - clickStartX, event.clientY - clickStartY);
+                    if (totalDistMoved > DRAG_THRESHOLD) {
+                        isPanning = true; // Flag as panning to prevent single click placement on mouseUp/click
+                    }
+                }
+                drawGrid();
+            } else { // Not dragging, update ghost position
+                if (cell && (cell.row !== ghostRow || cell.col !== ghostCol)) {
+                    ghostRow = cell.row;
+                    ghostCol = cell.col;
+                    drawGrid();
+                } else if (!cell && (ghostRow !== -1)) {
+                    ghostRow = -1;
+                    ghostCol = -1;
+                    drawGrid();
+                }
+            }
+        }
+        function handleKeyDown(event) {
+            // Do not handle controls if the help modal is open, except for 'H'
+            if (helpModalOverlay.classList.contains('visible') && event.key.toLowerCase() !== 'h') return;
+
+            // Handle WASD for panning
+            const WASD_SPEED = 50;
+            let panned = false;
+            switch (event.key.toLowerCase()) {
+                case 'w': panY += WASD_SPEED; panned = true; break;
+                case 's': panY -= WASD_SPEED; panned = true; break;
+                case 'a': panX += WASD_SPEED; panned = true; break;
+                case 'd': panX -= WASD_SPEED; panned = true; break;
+                case 'r':
+                    toggleRotation(); // Use the new function for rotation
+                    break;
+                case 'h':
+                    window.toggleHelpModal();
+                    break;
+            }
+            if (panned) {
+                drawGrid();
+            }
+        }
+        function handleCanvasClick(event) {
+            if (helpModalOverlay.classList.contains('visible')) return;
+            // Prevent placement if it was part of a drag/pan action
+            if (event.button !== 0 || isPanning || isDraggingForAction) {
+                isPanning = false; // Reset for next cycle
+                return;
+            }
+            const cell = getCellFromScreenCoords(event.clientX - canvas.getBoundingClientRect().left, event.clientY - canvas.getBoundingClientRect().top);
+            if (!cell) return;
+            
+            // --- CLONE Placement Click (1-tap action) ---
+            if (currentMode === MODES.CLONE && clonedArea !== null) {
+                // This is the placement tap (tap 3 for clone process). 
+                // applyClonedArea will execute the placement AND call setMode(MODES.CLICK).
+                applyClonedArea(cell);
+                return;
+            }
+            
+            // --- Two-Tap Selection Logic for LINE, DELETE, CLONE (Selection) ---
+            const isTwoTapMode = [MODES.LINE, MODES.DELETE, MODES.CLONE].includes(currentMode);
+
+            if (isTwoTapMode) {
+                if (!actionStartCell) {
+                    // First tap: Set start point and wait
+                    actionStartCell = cell;
+                    // Update mode display to show user a selection is pending
+                    const modeText = currentMode === MODES.LINE ? 'Line (Tap End Point)' :
+                                     currentMode === MODES.DELETE ? 'Delete (Tap End Point)' :
+                                     'Clone (Selection: Tap End Point)';
+                    document.getElementById('current-mode-display').textContent = modeText;
+                    drawGrid(); // Redraw to show ghost preview
+                    return;
+                } else {
+                    // Second tap: Execute action
+                    const start = actionStartCell;
+                    const end = cell;
+                    
+                    if (currentMode === MODES.LINE) {
+                        applyLinePlacement(start, end, selectedObjectType, ghostRotation);
+                        // Action complete, revert to CLICK
+                        actionStartCell = null;
+                        setMode(MODES.CLICK); 
+                    } else if (currentMode === MODES.DELETE) {
+                        applyLineDeletion(start, end);
+                        // Action complete, revert to CLICK
+                        actionStartCell = null;
+                        setMode(MODES.CLICK); 
+                    } else if (currentMode === MODES.CLONE) {
+                        handleCloneSelection(start, end); 
+                        // Selection complete, clear start point, DO NOT revert to CLICK.
+                        // Re-run setMode to update display text to 'Placement' mode.
+                        actionStartCell = null;
+                        setMode(MODES.CLONE); 
+                    }
+                    
+                    return;
+                }
+            }
+
+            // --- Standard CLICK Mode Logic (1-tap action) ---
+            if (currentMode === MODES.CLICK) {
+                const config = OBJECT_CONFIGS[selectedObjectType];
+                if (!config) return;
+                let placementMade = false;
+                // Determine rotation for placement (uses the current ghost rotation)
+                const objRotation = isDirectional(selectedObjectType) ?
+                    ghostRotation : 0;
+                if (selectedObjectType === 'tiled_floor') {
+                    const index = floorObjects.findIndex(obj => obj.row === cell.row && obj.col === cell.col);
+                    if (index === -1) {
+                        floorObjects.push({ type: selectedObjectType, row: cell.row, col: cell.col, id: KNOWN_INTEGER_IDS[selectedObjectType], rotation: 0 });
+                        placementMade = true;
+                    } else {
+                        floorObjects.splice(index, 1);
+                        placementMade = true;
+                    }
+                } else { // Check special objects and floor objects for occupancy
+                    const isOccupied = specialObjects.some(obj => obj.row === cell.row && obj.col === cell.col);
+                    if (!isOccupied) {
+                        let newId = KNOWN_INTEGER_IDS[selectedObjectType] || 0;
+                        specialObjects.push({ type: selectedObjectType, row: cell.row, col: cell.col, id: newId, rotation: objRotation });
+                        placementMade = true;
+                    } else {
+                        // Remove if already occupied (simple toggle)
+                        specialObjects = specialObjects.filter(obj => !(obj.row === cell.row && obj.col === cell.col) );
+                        placementMade = true;
+                    }
+                }
+                if (placementMade) {
+                    updateBlockCount(); // Update counter after placement/removal
+                    drawGrid();
+                }
+            }
+        }
+        function generateMapCode() {
+            const rotationToCode = { 0: 0, 90: 1, 180: 2, 270: 3 };
+            // Ensure unknown IDs are also exported correctly
+            const allObjects = [...floorObjects, ...specialObjects];
+            const codeString = allObjects.map(obj => {
+                const rotationCode = rotationToCode[obj.rotation] !== undefined ? rotationToCode[obj.rotation] : 0;
+                return `!b=${obj.id}:${obj.col}:${obj.row}:${rotationCode}`;
+            }).join(''); // CHANGED: join('') removes the semicolon separator
+
+            const output = document.getElementById('map-code-output');
+            output.value = codeString;
+            document.getElementById('code-output-container').classList.remove('hidden');
+        }
+        function loadMapFromCode() {
+            const code = document.getElementById('map-code-input').value.trim();
+            if (!code) {
+                console.warn('No code entered to load.');
+                return;
+            }
+
+            // Reset current map state
+            specialObjects = [];
+            floorObjects = [];
+
+            // Regex to match all block definitions: !b=ID:X:Y:R
+            const blockRegex = /!b=(\d+):(\d+):(\d+):(\d+)/g;
+            let match;
+            let blocksLoaded = 0;
+            let unknownBlocksCount = 0;
+            const rotationCodeToDegrees = { 0: 0, 1: 90, 2: 180, 3: 270 };
+            while ((match = blockRegex.exec(code)) !== null) {
+                const id = parseInt(match[1]);
+                const col = parseInt(match[2]);
+                const row = parseInt(match[3]);
+                const rotationCode = parseInt(match[4]);
+                // Skip if outside grid bounds
+                if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) continue;
+                let objectType = ID_TO_TYPE[id];
+                let rotation = rotationCodeToDegrees[rotationCode] || 0;
+                // Handle Unknown ID
+                if (!objectType) {
+                    objectType = 'unknown';
+                    unknownBlocksCount++;
+                }
+                const newObject = { type: objectType, row: row, col: col, id: id, rotation: rotation };
+                // Decide if it's a floor tile or a special feature
+                if (newObject.type === 'tiled_floor') {
+                    floorObjects.push(newObject);
+                } else {
+                    specialObjects.push(newObject);
+                }
+                blocksLoaded++;
+            }
+            if (blocksLoaded > 0) {
+                // Reset pan and zoom to show the overall map better
+                scale = 1.0;
+                panX = 0;
+                panY = 0;
+                drawGrid();
+                updateBlockCount(); // Update counter after loading
+                clonedArea = null;
+                let message = `Successfully loaded ${blocksLoaded} blocks.`;
+                if (unknownBlocksCount > 0) {
+                    message += ` Found **${unknownBlocksCount} unknown block IDs** which are displayed as solid black squares.`;
+                }
+                console.log(message);
+            } else {
+                console.warn('No valid blocks found in the pasted code.');
+            }
+        }
+        function copyCode() {
+            const output = document.getElementById('map-code-output');
+            output.select();
+            output.setSelectionRange(0, 99999);
+            try { // Use document.execCommand('copy') for better compatibility in iFrames
+                document.execCommand('copy');
+            } catch (err) {
+                console.error('Failed to copy code', err);
+            }
+        }
+        function handleItemChange(event) {
+            selectedObjectType = event.target.value;
+            // Clear clone data if selected item changes
+            if (currentMode === MODES.CLONE) {
+                clonedArea = null;
+                setMode(MODES.CLONE); // Re-set mode to update display text to "Selection"
+            }
+            updateRotationDisplay(); // Update rotation button state
+            drawGrid();
+        }
+        // --- Help Modal Logic ---
+        /**
+         * Toggles the visibility of the help modal.
+        */
+        window.toggleHelpModal = () => {
+            const isVisible = helpModalOverlay.classList.toggle('visible');
+            if (!isVisible) {
+                // When hiding, set the overlay to hidden after the transition completes
+                setTimeout(() => { helpModalOverlay.classList.add('hidden'); }, 300);
+            } else {
+                // When showing, remove the hidden class immediately
+                helpModalOverlay.classList.remove('hidden');
+            }
+        };
+
+        function init() {
+            canvas = document.getElementById('gridCanvas');
+            ctx = canvas.getContext('2d');
+            helpModalOverlay = document.getElementById('help-modal-overlay');
+            helpModal = document.getElementById('help-modal');
+
+            // Set initial canvas size and prepare for first draw
+            updateBaseSize();
+            // Start in CLICK mode by default
+            setMode(MODES.CLICK);
+
+            // --- WAIT FOR IMAGES TO LOAD BEFORE FIRST DRAW ---
+            loadImages().then(() => {
+                drawGrid();
+                updateBlockCount(); // Initial count on load
+                updateRotationDisplay(); // Initial rotation display update
+            });
+
+            // Setup Event Listeners
+            window.addEventListener('resize', () => { updateBaseSize(); drawGrid(); });
+            // Re-adding all core map editor listeners
+            canvas.addEventListener('wheel', handleWheel);
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('mouseleave', () => {
+                handleMouseUp(null); // Pass null event to indicate mouseleave
+                ghostRow = -1;
+                ghostCol = -1;
+                drawGrid();
+            });
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('click', handleCanvasClick);
+            document.addEventListener('keydown', handleKeyDown);
+
+            // --- Mobile Control Panel Listeners ---
+            document.getElementById('zoom-in-btn').addEventListener('click', () => zoomCanvas(true));
+            document.getElementById('zoom-out-btn').addEventListener('click', () => zoomCanvas(false));
+            document.getElementById('position-toggle-btn').addEventListener('click', togglePanelPosition);
+            document.getElementById('minimize-btn').addEventListener('click', minimizePanel);
+            document.getElementById('rotate-btn').addEventListener('click', toggleRotation); // New Rotate button listener
+
+            document.querySelectorAll('.pan-btn').forEach(btn => {
+                btn.addEventListener('click', (event) => {
+                    const direction = event.currentTarget.getAttribute('data-direction');
+                    panCanvas(direction);
+                });
+            });
+
+            // --- Main Editor Menu Listeners ---
+            document.getElementById('main-menu-minimize-btn').addEventListener('click', toggleMainMenu);
+
+
+            // Initialize buttons and dropdown
+            document.getElementById('generate-code-btn').addEventListener('click', generateMapCode);
+            document.getElementById('copy-code-btn').addEventListener('click', copyCode);
+            document.getElementById('load-map-btn').addEventListener('click', loadMapFromCode);
+            const select = document.getElementById('item-select');
+            select.innerHTML = '';
+            for (const key in OBJECT_CONFIGS) {
+                // Exclude the 'unknown' block from the manual selection dropdown
+                if (key !== 'unknown') {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = OBJECT_CONFIGS[key].name;
+                    select.appendChild(option);
+                }
+            }
+            select.value = selectedObjectType;
+            select.addEventListener('change', handleItemChange);
+            document.getElementById('mode-btn-click').addEventListener('click', () => setMode(MODES.CLICK));
+            document.getElementById('mode-btn-line').addEventListener('click', () => setMode(MODES.LINE));
+            document.getElementById('mode-btn-clone').addEventListener('click', () => {
+                // If in clone placement mode, clicking clone button resets selection and re-enters clone selection mode
+                if (currentMode === MODES.CLONE && clonedArea !== null) {
+                    clonedArea = null;
+                }
+                setMode(MODES.CLONE);
+            });
+            document.getElementById('mode-btn-delete').addEventListener('click', () => setMode(MODES.DELETE));
+
+            // Initial modal display
+            helpModalOverlay.classList.add('visible');
+            helpModalOverlay.classList.remove('hidden');
+        }
+        // Run the initialization once the DOM is fully loaded
+        window.onload = init;
+    </script>
+</head>
+<body class="flex flex-col items-center justify-start h-screen">
+    
+    <div id="mobile-control-panel" class="fixed z-50 left-1/2 transform -translate-x-1/2 bg-gray-900/90 backdrop-blur-md p-3 rounded-xl shadow-2xl transition-all duration-300 border border-indigo-700/50 flex flex-col items-center space-y-2 max-w-sm" style="touch-action: none;">
+        
+        <div class="flex space-x-2 w-full">
+            <button id="minimize-btn" class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full w-8 h-8 flex items-center justify-center text-xl font-bold leading-none shadow-lg transition-colors">
+                &minus;
+            </button>
+            <button id="position-toggle-btn" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-lg transition-colors py-2">
+                Move to Top
+            </button>
+        </div>
+
+        <div id="main-controls" class="flex space-x-3 w-full items-center justify-center">
+            
+            <div class="grid grid-cols-3 gap-1 p-2 bg-gray-800 rounded-lg">
+                <div class="col-span-1"></div>
+                <button class="pan-btn bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-md shadow-md" data-direction="up">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                </button>
+                <div class="col-span-1"></div>
+                
+                <button class="pan-btn bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-md shadow-md" data-direction="left">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                </button>
+                
+                <button id="rotate-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-md shadow-md text-sm font-bold flex items-center justify-center" title="Rotate Block (R key)">
+                    0°
+                </button>
+                
+                <button class="pan-btn bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-md shadow-md" data-direction="right">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                </button>
+
+                <div class="col-span-1"></div>
+                <button class="pan-btn bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-md shadow-md" data-direction="down">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                </button>
+                <div class="col-span-1"></div>
+            </div>
+
+            <div class="flex flex-col space-y-2 p-2 bg-gray-800 rounded-lg">
+                <button id="zoom-in-btn" class="zoom-btn bg-green-600 hover:bg-green-700 text-white p-2 rounded-md shadow-md text-xl font-bold leading-none">
+                    +
+                </button>
+                <span class="text-xs text-gray-400 text-center">ZOOM</span>
+                <button id="zoom-out-btn" class="zoom-btn bg-yellow-600 hover:bg-yellow-700 text-white p-2 rounded-md shadow-md text-xl font-bold leading-none">
+                    &minus;
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="app-container">
+        <div class="text-white text-center mb-4 mt-4 relative w-full max-w-7xl">
+            <h1 id="main-title" class="text-3xl font-bold text-white mb-2 shadow-lg p-2 rounded-lg bg-indigo-700/50"> Devast Base Editor </h1>
+            <p class="text-sm text-gray-400"> Current Mode: <span id="current-mode-display" class="font-semibold text-yellow-400">Click (Single Place/Toggle)</span>. Press **H** for help/controls. </p>
+            
+            <div id="main-editor-menu" class="absolute top-0 right-0 p-3 bg-gray-700/50 rounded-lg shadow-xl backdrop-blur-sm flex flex-col items-stretch space-y-2 max-w-xs md:max-w-none transition-all duration-300">
+                <div class="flex items-center justify-between w-full">
+                    <div class="p-2 bg-gray-600 rounded-md text-sm font-semibold text-white flex-grow mr-2">
+                        Total Blocks Placed: <span id="block-count" class="text-yellow-400">0</span>
+                    </div>
+                    <button id="main-menu-minimize-btn" class="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-md w-8 h-8 flex items-center justify-center text-xl font-bold leading-none shadow-lg transition-colors" title="Minimize Menu">
+                        &minus;
+                    </button>
+                </div>
+                
+                <div id="main-menu-content">
+                    <label for="item-select" class="text-sm font-medium text-gray-200">Select Block:</label>
+                    <select id="item-select" class="block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></select>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="mode-btn-click" class="mode-btn flex-1 bg-yellow-500 hover:bg-yellow-600 text-gray-900 ring-2 ring-yellow-300 font-semibold" title="Single Placement/Removal">🖱️ Click</button>
+                        <button id="mode-btn-line" class="mode-btn flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold" title="Tap two points to draw a line">📏 Line</button>
+                        <button id="mode-btn-clone" class="mode-btn flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold" title="Tap two points to select/copy">📋 Clone</button>
+                        <button id="mode-btn-delete" class="mode-btn flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold" title="Tap two points to delete an area">🗑️ Delete</button>
+                    </div>
+                    <button id="generate-code-btn" class="px-4 py-2 bg-indigo-600 text-white font-semibold text-sm rounded-md shadow-lg transition duration-200 transform hover:scale-[1.02]"> Generate Map Code </button>
+                </div>
+            </div>
+            </div>
+
+        <div class="flex flex-grow items-center justify-center w-full max-w-full rounded-xl mb-4">
+            <canvas id="gridCanvas"></canvas>
+        </div>
+
+        <div id="code-output-container" class="w-full max-w-4xl p-4 bg-gray-800 rounded-lg shadow-2xl mb-8 hidden">
+            <h2 class="text-xl font-bold text-gray-100 mb-3">Map Code Interface</h2>
+            <div class="mb-4">
+                <label for="map-code-input" class="text-gray-300 text-sm mb-1 block">Paste Map Code to Load Blocks:</label>
+                <textarea id="map-code-input" rows="3" class="w-full p-3 bg-gray-900 text-yellow-300 border border-gray-700 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Paste your !b=ID:X:Y:R code string here..."></textarea>
+                <button id="load-map-btn" class="mt-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md transition duration-150"> Load Map </button>
+            </div>
+            <hr class="border-gray-700 mb-4">
+            <label for="map-code-output" class="text-gray-300 text-sm mb-1 block">Generated Map Code (Copy this to use your base):</label>
+            <textarea id="map-code-output" rows="3" readonly class="w-full p-3 bg-gray-900 text-yellow-300 border border-gray-700 rounded-md"></textarea>
+            <button id="copy-code-btn" class="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition duration-150"> Copy Code </button>
+        </div>
+
+        <div id="help-modal-overlay" class="modal-overlay hidden" onclick="window.toggleHelpModal()">
+            <div id="help-modal" class="modal-content bg-gray-800 p-6 rounded-lg shadow-2xl text-white max-w-md" onclick="event.stopPropagation()">
+                <h2 class="text-2xl font-bold mb-4 text-indigo-400">Base Editor Controls</h2>
+                <div class="space-y-4">
+                    <h3 class="text-xl font-semibold text-indigo-300">Map Navigation</h3>
+                    <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
+                        <li>**Zoom**: Use the **Scroll Wheel** (or pinch on touch devices). The new **Mobile Panel** has dedicated zoom buttons.</li>
+                        <li>**Pan/Move**: Use **WASD** keys or **Middle Mouse Click & Drag**. The new **Mobile Panel** has dedicated directional pan arrows.</li>
+                        <li>**Rotate Ghost Preview**: Press **R** or click the **Rotate button** (in the center of the Mobile D-pad) to rotate the object ghost before placing (only for applicable items like 3x1 features, **Fridge**, **Metal Low Wall**, or **Bag**).</li>
+                        <li>**Toggle Help**: Press **H** to show/hide this modal.</li>
+                    </ul>
+                    <h3 class="text-xl font-semibold text-indigo-300">Placement Modes</h3>
+                    <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
+                        <li>**Click (🖱️)**: Single click/tap to place or remove the selected object.</li>
+                        <li>**Line (📏)** and **Delete (🗑️)**: **Tap twice** to define the start and end points of the line/area. The editor returns to **Click** mode after execution.</li>
+                        <li>**Clone (Selection 📋)**: **Tap twice** to define the area to copy. The mode stays active for placement.</li>
+                        <li>**Clone (Placement 📋)**: After selection, **tap once** on the target cell to place the copied area. The editor returns to **Click** mode after placement.</li>
+                    </ul>
+                </div>
+                <div class="mt-6 text-center text-sm text-gray-500 border-t border-gray-700 pt-3">
+                    <p>The base grid is **149x149**. Start building by closing this window!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
