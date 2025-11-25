@@ -255,8 +255,10 @@
         */
         function updateRotationDisplay() {
             const btn = document.getElementById('rotate-btn');
+            const isClonePlacement = currentMode === MODES.CLONE && clonedArea !== null;
+
             if (btn) {
-                if (isDirectional(selectedObjectType) || (currentMode === MODES.CLONE && clonedArea !== null)) {
+                if (isDirectional(selectedObjectType) || isClonePlacement) {
                     // Show the rotation and make it clickable if directional OR if in clone placement mode
                     btn.textContent = `${ghostRotation}°`;
                     btn.classList.remove('bg-gray-400', 'text-gray-900', 'cursor-default');
@@ -276,11 +278,18 @@
          * Rotates the ghost object by 90 degrees and updates the display.
         */
         function toggleRotation() {
+            const isClonePlacement = currentMode === MODES.CLONE && clonedArea !== null;
+            const isSinglePlacement = isDirectional(selectedObjectType);
+
             // Allow rotation if the selected object is directional OR if we are in the clone placement mode
-            if (isDirectional(selectedObjectType) || (currentMode === MODES.CLONE && clonedArea !== null)) {
+            if (isSinglePlacement || isClonePlacement) {
                 ghostRotation = (ghostRotation + 90) % 360;
+                // DEBUG: Confirm rotation is happening
+                console.log(`Rotation set to ${ghostRotation}°. Mode: ${currentMode}, Cloned: ${clonedArea !== null}`);
                 updateRotationDisplay();
                 drawGrid();
+            } else {
+                 console.log('Rotation blocked: Must select a directional object or be in Clone Placement mode.');
             }
         }
 
@@ -863,4 +872,92 @@
          * Deletes all objects (special and floor) within the bounding box defined by start and end.
         */
         function applyLineDeletion(start, end) {
-            if (!start || !
+            if (!start || !end) return;
+            const startX = Math.min(start.col, end.col);
+            const startY = Math.min(start.row, end.row);
+            const endX = Math.max(start.col, end.col);
+            const endY = Math.max(start.row, end.row);
+
+            specialObjects = specialObjects.filter(obj => 
+                !(obj.col >= startX && obj.col <= endX && obj.row >= startY && obj.row <= endY)
+            );
+            floorObjects = floorObjects.filter(obj => 
+                !(obj.col >= startX && obj.col <= endX && obj.row >= startY && obj.row <= endY)
+            );
+            updateBlockCount(); // Update counter after deletion
+        }
+
+        /**
+         * Handles the end of a CLONE selection tap.
+        */
+        function handleCloneSelection(start, end) {
+            if (!start || !end) return;
+            const startX = Math.min(start.col, end.col);
+            const startY = Math.min(start.row, end.row);
+            const endX = Math.max(start.col, end.col);
+            const endY = Math.max(start.row, end.row);
+            const copiedItems = [];
+
+            // Copy special objects
+            [...specialObjects, ...floorObjects].forEach(obj => {
+                if (obj.col >= startX && obj.col <= endX && obj.row >= startY && obj.row <= endY) {
+                    // Determine the rotation of the object relative to the clone group origin (startX, startY)
+                    let itemRotation = obj.rotation;
+                    // Only care about the object's rotation if it's directional, otherwise default to 0
+                    if (!isDirectional(obj.type)) {
+                        itemRotation = 0; 
+                    }
+
+                    copiedItems.push({
+                        type: obj.type,
+                        id: obj.id,
+                        rotation: itemRotation, // Use the base rotation, we apply ghostRotation on placement
+                        // Calculate offset relative to the top-left corner of the selection
+                        offsetX: obj.col - startX,
+                        offsetY: obj.row - startY,
+                    });
+                }
+            });
+            if (copiedItems.length > 0) {
+                clonedArea = {
+                    width: endX - startX + 1,
+                    height: endY - startY + 1,
+                    data: copiedItems
+                };
+            } else {
+                clonedArea = null;
+            }
+        }
+
+        /**
+         * Places the stored clonedArea at the given cell.
+        */
+        function applyClonedArea(targetCell) {
+            if (!clonedArea || !targetCell) return;
+            
+            const rotationDegrees = ghostRotation; // Use the current ghost rotation for group placement
+            const degreesToRotationCode = { 0: 0, 1: 90, 2: 180, 3: 270 };
+
+            const W = clonedArea.width;
+            const H = clonedArea.height;
+
+            clonedArea.data.forEach(item => {
+                let itemOffsetX = item.offsetX;
+                let itemOffsetY = item.offsetY;
+
+                let rotatedOffsetX = itemOffsetX;
+                let rotatedOffsetY = itemOffsetY;
+
+                // Apply Group Rotation to Offsets (Standard Grid Rotation Matrix around (0,0))
+                if (rotationDegrees === 90) {
+                    // (x, y) -> (y, W - 1 - x)
+                    rotatedOffsetX = itemOffsetY;
+                    rotatedOffsetY = W - 1 - itemOffsetX;
+                } else if (rotationDegrees === 180) {
+                    // (x, y) -> (W - 1 - x, H - 1 - y)
+                    rotatedOffsetX = W - 1 - itemOffsetX;
+                    rotatedOffsetY = H - 1 - itemOffsetY;
+                } else if (rotationDegrees === 270) {
+                    // (x, y) -> (H - 1 - y, x)
+                    rotatedOffsetX = H - 1 - itemOffsetY;
+                    rotated
