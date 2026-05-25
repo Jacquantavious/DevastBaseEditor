@@ -438,22 +438,22 @@ const MODES = { CLICK: 'click', LINE: 'line', DELETE: 'delete', CLONE: 'clone' }
 
 // Object config — shapes drawn procedurally to match devast.io visual style
 const OBJECT_CONFIGS = {
-    'metal_wall':     { name: 'Metal Wall',      color: '#b8b8b8', shapeType: 'square',      length: 1, directional: false, section: 'Blocks' },
-    'metal_low_wall': { name: 'Metal Low Wall',   color: '#909090', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
-    'metal_door':     { name: 'Metal Door',       color: '#787878', shapeType: 'door',        length: 1, directional: true,  section: 'Blocks' },
-    'metal_low_door': { name: 'Metal Low Door',   color: '#686868', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
-    'stone_wall':     { name: 'Stone Wall',       color: '#7a7a72', shapeType: 'square',      length: 1, directional: false, section: 'Blocks' },
-    'stone_low_wall': { name: 'Stone Low Wall',   color: '#686860', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
-    'stone_door':     { name: 'Stone Door',       color: '#606058', shapeType: 'door',        length: 1, directional: true,  section: 'Blocks' },
-    'stone_low_door': { name: 'Stone Low Door',   color: '#505048', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
-    'wood_wall':      { name: 'Wood Wall',        color: '#7a6040', shapeType: 'square',      length: 1, directional: false, section: 'Blocks' },
-    'wood_low_wall':  { name: 'Wood Low Wall',    color: '#6a5030', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
-    'wood_door':      { name: 'Wood Door',        color: '#5a4028', shapeType: 'door',        length: 1, directional: true,  section: 'Blocks' },
-    'wood_low_door':  { name: 'Wood Low Door',    color: '#4a3018', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
-    'tiled_floor':    { name: 'Tiled Floor',      color: '#484848', shapeType: 'floor',       length: 1, directional: false, section: 'Blocks' },
-    'stone_floor':    { name: 'Stone Floor',      color: '#606060', shapeType: 'floor',       length: 1, directional: false, section: 'Blocks' },
-    'wood_floor':     { name: 'Wood Dark Floor',  color: '#5a4a32', shapeType: 'floor',       length: 1, directional: false, section: 'Blocks' },
-    'wood_floor_light': { name: 'Wood Light Floor', color: '#7a6848', shapeType: 'floor',     length: 1, directional: false, section: 'Blocks' },
+    'metal_wall':       { name: 'Metal Wall',       color: '#b8b8b8', shapeType: 'square',      length: 1, directional: false, section: 'Blocks' },
+    'stone_wall':       { name: 'Stone Wall',       color: '#7a7a72', shapeType: 'square',      length: 1, directional: false, section: 'Blocks' },
+    'wood_wall':        { name: 'Wood Wall',        color: '#7a6040', shapeType: 'square',      length: 1, directional: false, section: 'Blocks' },
+    'metal_low_wall':   { name: 'Metal Low Wall',   color: '#909090', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
+    'stone_low_wall':   { name: 'Stone Low Wall',   color: '#686860', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
+    'wood_low_wall':    { name: 'Wood Low Wall',    color: '#6a5030', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
+    'metal_door':       { name: 'Metal Door',       color: '#787878', shapeType: 'door',        length: 1, directional: true,  section: 'Blocks' },
+    'stone_door':       { name: 'Stone Door',       color: '#606058', shapeType: 'door',        length: 1, directional: true,  section: 'Blocks' },
+    'wood_door':        { name: 'Wood Door',        color: '#5a4028', shapeType: 'door',        length: 1, directional: true,  section: 'Blocks' },
+    'metal_low_door':   { name: 'Metal Low Door',   color: '#686868', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
+    'stone_low_door':   { name: 'Stone Low Door',   color: '#505048', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
+    'wood_low_door':    { name: 'Wood Low Door',    color: '#4a3018', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
+    'tiled_floor':      { name: 'Tiled Floor',      color: '#484848', shapeType: 'floor',       length: 1, directional: false, section: 'Blocks' },
+    'stone_floor':      { name: 'Stone Floor',      color: '#606060', shapeType: 'floor',       length: 1, directional: false, section: 'Blocks' },
+    'wood_floor':       { name: 'Wood Dark Floor',  color: '#5a4a32', shapeType: 'floor',       length: 1, directional: false, section: 'Blocks' },
+    'wood_floor_light': { name: 'Wood Light Floor', color: '#7a6848', shapeType: 'floor',       length: 1, directional: false, section: 'Blocks' },
     'research':       { name: 'Research Table',   color: '#4C60F5', shapeType: 'rect3x1',     length: 3, directional: true,  section: 'Benches' },
     'smelter':        { name: 'Smelter',          color: '#E32636', shapeType: 'rect3x1',     length: 3, directional: true,  section: 'Benches' },
     'tesla':          { name: 'Tesla Coil',       color: '#00BB00', shapeType: 'rect3x1',     length: 3, directional: true,  section: 'Benches' },
@@ -468,12 +468,12 @@ const OBJECT_CONFIGS = {
 
 const OBJECT_IDS = {
     'research': 55, 'smelter': 49, 'tesla': 94, 'fridge': 61,
-    'workbench': 19, 'firepit': 48, 'metal_wall': 29, 'metal_door': 52,
-    'tiled_floor': 85, 'feeder': 160, 'weaving': 57, 'bag': 64,
-    'metal_low_wall': 70, 'metal_low_door': 32,
-    'stone_wall': 69, 'stone_low_wall': 68, 'stone_door': 28, 'stone_low_door': 30,
-    'wood_wall': 51, 'wood_low_wall': 27, 'wood_door': 50, 'wood_low_door': 84,
-    'stone_floor': 31, 'wood_floor': 62, 'wood_floor_light': 67,
+    'workbench': 19, 'firepit': 48, 'feeder': 160, 'weaving': 57, 'bag': 64,
+    'tiled_floor': 85,
+    'metal_wall': 29, 'metal_low_wall': 70, 'metal_door': 52, 'metal_low_door': 32,
+    'stone_wall': 28, 'stone_low_wall': 69, 'stone_door': 51, 'stone_low_door': 30,
+    'wood_wall':  27, 'wood_low_wall':  68, 'wood_door':  50, 'wood_low_door':  31,
+    'stone_floor': 84, 'wood_floor': 62, 'wood_floor_light': 67,
     'unknown': 99
 };
 const ID_TO_TYPE = {};
@@ -609,11 +609,10 @@ function drawObject(worldCtx, type, cx, cy, cellSize, rotation, alpha) {
             drawW = s * 0.85;
             drawH = s * cfg.length * 0.92;
         } else if (aspect > 1.5) {
-            // Wide landscape sprite (e.g. metal_low_wall 2.14:1)
-            // Draw flush against the bottom edge of the cell, matching in-game appearance
-            drawW = s * 0.9;
-            drawH = s * 0.9 / aspect;
-            drawOffsetY = h - drawH; // bottom-aligned instead of centered
+            // Wide landscape sprite (e.g. low walls/doors)
+            // Fill the full cell width, scale height to match aspect ratio
+            drawW = s;
+            drawH = s / aspect;
         } else if (aspect < 0.75) {
             // Tall portrait sprite - preserve aspect within cell
             drawH = s;
@@ -676,12 +675,12 @@ function drawObject(worldCtx, type, cx, cy, cellSize, rotation, alpha) {
         worldCtx.stroke();
 
     } else if (cfg.shapeType === 'half-square') {
+        const hw = s * 0.5; // half height
         worldCtx.fillStyle = cfg.color;
-        worldCtx.fillRect(-h, h * 0.4, s, h * 0.55); // bottom portion of cell
-        worldCtx.fillStyle = 'rgba(0,0,0,0.2)';
+        worldCtx.fillRect(-h, -hw / 2, s, hw);
         worldCtx.strokeStyle = 'rgba(255,255,255,0.3)';
         worldCtx.lineWidth = 1.5 / scale;
-        worldCtx.strokeRect(-h, h * 0.4, s, h * 0.55);
+        worldCtx.strokeRect(-h, -hw / 2, s, hw);
 
     } else if (cfg.shapeType === 'door') {
         worldCtx.fillStyle = cfg.color;
