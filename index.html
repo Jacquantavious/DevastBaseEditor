@@ -583,16 +583,18 @@ function drawObject(worldCtx, type, cx, cy, cellSize, rotation, alpha) {
         const spriteH = img.naturalHeight;
         const aspect = spriteW / spriteH;
 
-        let drawW, drawH;
+        let drawW, drawH, drawOffsetY;
+
         if (cfg.shapeType === 'rect3x1') {
             // 3-cell tall sprite: width = 1 cell, height = 3 cells
             drawW = s * 0.85;
             drawH = s * cfg.length * 0.92;
         } else if (aspect > 1.5) {
             // Wide landscape sprite (e.g. metal_low_wall 2.14:1)
-            // Draw it as a compact half-block within the cell
+            // Draw flush against the bottom edge of the cell, matching in-game appearance
             drawW = s * 0.9;
             drawH = s * 0.9 / aspect;
+            drawOffsetY = h - drawH; // bottom-aligned instead of centered
         } else if (aspect < 0.75) {
             // Tall portrait sprite - preserve aspect within cell
             drawH = s;
@@ -603,19 +605,22 @@ function drawObject(worldCtx, type, cx, cy, cellSize, rotation, alpha) {
             drawH = s;
         }
 
-        worldCtx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+        // Default: center vertically (overridden above for landscape sprites)
+        if (drawOffsetY === undefined) drawOffsetY = -drawH / 2;
+
+        worldCtx.drawImage(img, -drawW / 2, drawOffsetY, drawW, drawH);
 
         // Ghost outline
         if ((alpha ?? 1.0) < 1.0) {
             worldCtx.strokeStyle = 'rgba(255,255,255,0.6)';
             worldCtx.lineWidth = 2 / scale;
-            worldCtx.strokeRect(-drawW / 2, -drawH / 2, drawW, drawH);
+            worldCtx.strokeRect(-drawW / 2, drawOffsetY, drawW, drawH);
         }
         worldCtx.restore();
         return;
     }
 
-    // ── Fallback shape drawing (feeder, fridge, metal_low_wall, unknown) ───
+    // ── Fallback shape drawing ─────────────────────────────────────────────
     if (cfg.shapeType === 'rect3x1') {
         const len = s * cfg.length;
         const w = s * 0.65;
@@ -653,12 +658,11 @@ function drawObject(worldCtx, type, cx, cy, cellSize, rotation, alpha) {
 
     } else if (cfg.shapeType === 'half-square') {
         worldCtx.fillStyle = cfg.color;
-        worldCtx.fillRect(-h, -h, h, s);
+        worldCtx.fillRect(-h, h * 0.4, s, h * 0.55); // bottom portion of cell
         worldCtx.fillStyle = 'rgba(0,0,0,0.2)';
-        worldCtx.fillRect(0, -h, h, s);
         worldCtx.strokeStyle = 'rgba(255,255,255,0.3)';
         worldCtx.lineWidth = 1.5 / scale;
-        worldCtx.strokeRect(-h, -h, s, s);
+        worldCtx.strokeRect(-h, h * 0.4, s, h * 0.55);
 
     } else if (cfg.shapeType === 'door') {
         worldCtx.fillStyle = cfg.color;
@@ -811,7 +815,6 @@ function renderSpriteIcon(type) {
     x.fillStyle = '#38523A';
     x.fillRect(0, 0, 48, 48);
     // draw the object centered, with a fake scale of 1
-    const fakeScale = 1;
     const savedScale = scale;
     scale = 1; // temporarily override for lineWidth calcs in drawObject
     drawObject(x, type, 24, 24, 44, 0, 1.0);
