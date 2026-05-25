@@ -441,13 +441,19 @@ const OBJECT_CONFIGS = {
     'metal_wall':     { name: 'Metal Wall',      color: '#b8b8b8', shapeType: 'square',      length: 1, directional: false, section: 'Blocks' },
     'metal_low_wall': { name: 'Metal Low Wall',   color: '#909090', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
     'metal_door':     { name: 'Metal Door',       color: '#787878', shapeType: 'door',        length: 1, directional: true,  section: 'Blocks' },
+    'metal_low_door': { name: 'Metal Low Door',   color: '#686868', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
     'stone_wall':     { name: 'Stone Wall',       color: '#7a7a72', shapeType: 'square',      length: 1, directional: false, section: 'Blocks' },
     'stone_low_wall': { name: 'Stone Low Wall',   color: '#686860', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
     'stone_door':     { name: 'Stone Door',       color: '#606058', shapeType: 'door',        length: 1, directional: true,  section: 'Blocks' },
+    'stone_low_door': { name: 'Stone Low Door',   color: '#505048', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
     'wood_wall':      { name: 'Wood Wall',        color: '#7a6040', shapeType: 'square',      length: 1, directional: false, section: 'Blocks' },
     'wood_low_wall':  { name: 'Wood Low Wall',    color: '#6a5030', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
     'wood_door':      { name: 'Wood Door',        color: '#5a4028', shapeType: 'door',        length: 1, directional: true,  section: 'Blocks' },
+    'wood_low_door':  { name: 'Wood Low Door',    color: '#4a3018', shapeType: 'half-square', length: 1, directional: true,  section: 'Blocks' },
     'tiled_floor':    { name: 'Tiled Floor',      color: '#484848', shapeType: 'floor',       length: 1, directional: false, section: 'Blocks' },
+    'stone_floor':    { name: 'Stone Floor',      color: '#606060', shapeType: 'floor',       length: 1, directional: false, section: 'Blocks' },
+    'wood_floor':     { name: 'Wood Dark Floor',  color: '#5a4a32', shapeType: 'floor',       length: 1, directional: false, section: 'Blocks' },
+    'wood_floor_light': { name: 'Wood Light Floor', color: '#7a6848', shapeType: 'floor',     length: 1, directional: false, section: 'Blocks' },
     'research':       { name: 'Research Table',   color: '#4C60F5', shapeType: 'rect3x1',     length: 3, directional: true,  section: 'Benches' },
     'smelter':        { name: 'Smelter',          color: '#E32636', shapeType: 'rect3x1',     length: 3, directional: true,  section: 'Benches' },
     'tesla':          { name: 'Tesla Coil',       color: '#00BB00', shapeType: 'rect3x1',     length: 3, directional: true,  section: 'Benches' },
@@ -464,9 +470,10 @@ const OBJECT_IDS = {
     'research': 55, 'smelter': 49, 'tesla': 94, 'fridge': 61,
     'workbench': 19, 'firepit': 48, 'metal_wall': 29, 'metal_door': 52,
     'tiled_floor': 85, 'feeder': 160, 'weaving': 57, 'bag': 64,
-    'metal_low_wall': 70,
-    'stone_wall': 69, 'stone_low_wall': 68, 'stone_door': 28,
-    'wood_wall': 51, 'wood_low_wall': 27, 'wood_door': 50,
+    'metal_low_wall': 70, 'metal_low_door': 32,
+    'stone_wall': 69, 'stone_low_wall': 68, 'stone_door': 28, 'stone_low_door': 30,
+    'wood_wall': 51, 'wood_low_wall': 27, 'wood_door': 50, 'wood_low_door': 84,
+    'stone_floor': 31, 'wood_floor': 62, 'wood_floor_light': 67,
     'unknown': 99
 };
 const ID_TO_TYPE = {};
@@ -530,12 +537,18 @@ const TYPE_TO_SPRITE = {
     'tesla':          'day-workbench3',
     'metal_wall':     'day-steel-wall0',
     'metal_door':     'day-steel-door1',
+    'metal_low_door': 'day-steel-door',
     'stone_wall':     'day-stone-wall0',
     'stone_low_wall': 'day-stone-smallwalls-0',
     'stone_door':     'day-stone-door1',
+    'stone_low_door': 'day-stone-door',
     'wood_wall':      'day-wood-wall0',
     'wood_low_wall':  'day-wood-smallwalls-0',
     'wood_door':      'day-wood-door1',
+    'wood_low_door':  'day-wood-door',
+    'stone_floor':    'day-stone-floor-0',
+    'wood_floor':     'day-wood-floor-0',
+    'wood_floor_light': 'day-wood-floor-light-0',
     'smelter':        'day-smelter-off',
     'tiled_floor':    'day-tiling-floor-0',
     'weaving':        'day-weaving-machine',
@@ -777,7 +790,7 @@ function drawLineGhost(start, end, isDel, isSel) {
     const sy = Math.min(start.row, end.row), ey = Math.max(start.row, end.row);
     const horiz = Math.abs(end.col - start.col) >= Math.abs(end.row - start.row);
 
-    if (selectedType === 'tiled_floor') {
+    if (isFloor(selectedType)) {
         for (let r = sy; r <= ey; r++)
             for (let c = sx; c <= ex; c++) {
                 const cx = c * cellSize + cellSize / 2;
@@ -899,8 +912,11 @@ function updateRotateBtn() {
 }
 
 // ─── ACTIONS ───────────────────────────────────────────────────────────────
+const FLOOR_TYPES = new Set(['tiled_floor', 'stone_floor', 'wood_floor', 'wood_floor_light']);
+function isFloor(type) { return FLOOR_TYPES.has(type); }
+
 function placeObject(cell) {
-    if (selectedType === 'tiled_floor') {
+    if (isFloor(selectedType)) {
         const idx = floorObjects.findIndex(o => o.row === cell.row && o.col === cell.col);
         if (idx === -1) floorObjects.push({ type: selectedType, row: cell.row, col: cell.col, id: OBJECT_IDS[selectedType], rotation: 0 });
         else floorObjects.splice(idx, 1);
@@ -922,7 +938,7 @@ function applyLine(start, end) {
     const horiz = Math.abs(end.col - start.col) >= Math.abs(end.row - start.row);
     const rot = isDirectional(selectedType) ? ghostRotation : 0;
 
-    if (selectedType === 'tiled_floor') {
+    if (isFloor(selectedType)) {
         for (let r = sy; r <= ey; r++)
             for (let c = sx; c <= ex; c++) {
                 if (!floorObjects.some(o => o.row === r && o.col === c))
@@ -970,7 +986,7 @@ function applyClonePaste(cell) {
         const tr = cell.row + item.offsetY, tc = cell.col + item.offsetX;
         if (tr < 0 || tr >= GRID_SIZE || tc < 0 || tc >= GRID_SIZE) continue;
         const newObj = { type: item.type, row: tr, col: tc, id: item.id, rotation: item.rotation };
-        if (item.type === 'tiled_floor') {
+        if (isFloor(item.type)) {
             if (!floorObjects.some(o => o.row === tr && o.col === tc)) floorObjects.push(newObj);
         } else {
             if (!specialObjects.some(o => o.row === tr && o.col === tc)) specialObjects.push(newObj);
@@ -1016,7 +1032,7 @@ function loadFromPanel() {
         if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) continue;
         const type = ID_TO_TYPE[id] || 'unknown';
         const obj = { type, row, col, id, rotation: rotDeg[rotCode] ?? 0 };
-        if (type === 'tiled_floor') floorObjects.push(obj);
+        if (isFloor(type)) floorObjects.push(obj);
         else specialObjects.push(obj);
         count++;
     }
