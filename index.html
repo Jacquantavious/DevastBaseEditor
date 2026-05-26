@@ -347,6 +347,176 @@
             display: none;
         }
         #action-indicator.visible { display: block; }
+
+        /* ─── STORAGE MODAL ──────────────────────── */
+        #storage-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 150;
+        }
+        #storage-overlay.hidden { display: none; }
+        #storage-modal {
+            background: #1a1f1a;
+            border: 2px solid #555;
+            border-radius: 8px;
+            padding: 16px;
+            width: 340px;
+            color: #ccc;
+            position: relative;
+        }
+        #storage-modal h3 {
+            color: #9abe5a;
+            font-size: 14px;
+            margin-bottom: 4px;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+        #storage-modal .storage-subtitle {
+            color: #666;
+            font-size: 10px;
+            margin-bottom: 12px;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+        #storage-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+        .storage-slot {
+            width: 44px;
+            height: 44px;
+            background: #0d1a0d;
+            border: 2px solid #333;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: border-color 0.1s;
+        }
+        .storage-slot:hover { border-color: #7a9a4a; }
+        .storage-slot.drag-over { border-color: #9abe5a; background: #1a3a1a; }
+        .storage-slot img {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            image-rendering: pixelated;
+            pointer-events: none;
+        }
+        .storage-slot .slot-remove {
+            display: none;
+            position: absolute;
+            top: -6px; right: -6px;
+            width: 14px; height: 14px;
+            background: #8c3e3e;
+            border-radius: 50%;
+            font-size: 9px;
+            color: #fff;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .storage-slot:hover .slot-remove { display: flex; }
+        #storage-close-btn {
+            width: 100%;
+            padding: 7px;
+            background: #2a3a2a;
+            border: 1px solid #4a6a4a;
+            border-radius: 4px;
+            color: #9abe5a;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+        #storage-close-btn:hover { background: #3a4a3a; }
+        .storage-chest-img {
+            width: 100%;
+            height: 80px;
+            object-fit: contain;
+            image-rendering: pixelated;
+            margin-bottom: 10px;
+            opacity: 0.85;
+        }
+
+        /* ─── ITEM PANEL (right panel items for dragging) ── */
+        #item-panel {
+            padding: 6px 8px 8px;
+            border-top: 2px solid #444;
+            background: rgba(10,15,10,0.6);
+        }
+        #item-panel .item-section-label {
+            color: #6a8a4a;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            display: block;
+        }
+        #item-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 3px;
+        }
+        .item-cell {
+            aspect-ratio: 1;
+            background: #1a2a1a;
+            border: 2px solid #2a3a2a;
+            border-radius: 3px;
+            cursor: grab;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: border-color 0.1s;
+        }
+        .item-cell:hover { border-color: #6a9a4a; }
+        .item-cell:active { cursor: grabbing; }
+        .item-cell img {
+            width: 85%;
+            height: 85%;
+            object-fit: contain;
+            image-rendering: pixelated;
+            pointer-events: none;
+        }
+        .item-cell .item-tooltip {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 4px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: #ddd;
+            font-size: 10px;
+            padding: 3px 6px;
+            border-radius: 3px;
+            white-space: nowrap;
+            z-index: 100;
+            pointer-events: none;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+        .item-cell:hover .item-tooltip { display: block; }
+
+        /* ─── DRAG GHOST ─────────────────────────── */
+        #drag-ghost {
+            position: fixed;
+            width: 40px; height: 40px;
+            pointer-events: none;
+            z-index: 9999;
+            display: none;
+            transform: translate(-50%, -50%);
+        }
+        #drag-ghost img {
+            width: 100%; height: 100%;
+            object-fit: contain;
+            image-rendering: pixelated;
+            opacity: 0.85;
+        }
     </style>
 </head>
 <body>
@@ -381,6 +551,17 @@
 
         <div id="sprite-panel">
             <div id="sprite-grid"></div>
+        </div>
+        <!-- Item panel for dragging into storage -->
+        <div id="item-panel">
+            <span class="item-section-label">📦 Items (drag into storage)</span>
+            <div id="item-grid">
+                <!-- Items added here dynamically; empty until resources are added -->
+                <div class="item-cell" style="opacity:0.3;cursor:default;">
+                    <div style="color:#444;font-size:18px;">+</div>
+                    <div class="item-tooltip">No items yet</div>
+                </div>
+            </div>
         </div>
         <div id="code-panel">
             <label>Map Code</label>
@@ -426,6 +607,20 @@
 
 <div id="toast">Copied!</div>
 
+<!-- Storage Modal -->
+<div id="storage-overlay" class="hidden" onclick="closeStorage(event)">
+    <div id="storage-modal" onclick="event.stopPropagation()">
+        <h3>🧊 Fridge Storage</h3>
+        <div class="storage-subtitle">Drag items from the right panel into slots. Right-click a slot to clear it.</div>
+        <img src="./chest-box4.png" class="storage-chest-img" alt="chest">
+        <div id="storage-grid"></div>
+        <button id="storage-close-btn" onclick="closeStorage()">Close</button>
+    </div>
+</div>
+
+<!-- Drag ghost that follows cursor -->
+<div id="drag-ghost"><img src="" alt=""></div>
+
 <script>
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────
 const GRID_SIZE = 150;
@@ -464,6 +659,8 @@ const OBJECT_CONFIGS = {
     'fridge':         { name: 'Fridge',           color: '#C0C0C0', shapeType: 'half-square', length: 1, directional: true,  section: 'Benches' },
     'bag':            { name: 'Bag',              color: '#d97706', shapeType: 'oval',        length: 1, directional: true,  section: 'Benches' },
     'unknown':        { name: 'Unknown',          color: '#000000', shapeType: 'square',      length: 1, directional: false, section: null },
+    'marker_open':    { name: 'Open Marker',       color: '#cc2222', shapeType: 'marker',      length: 1, directional: false, section: 'Logic' },
+    'marker_closed':  { name: 'Closed Marker',     color: '#2255cc', shapeType: 'marker',      length: 1, directional: false, section: 'Logic' },
 };
 
 const OBJECT_IDS = {
@@ -474,7 +671,8 @@ const OBJECT_IDS = {
     'stone_wall': 28, 'stone_low_wall': 69, 'stone_door': 51, 'stone_low_door': 31,
     'wood_wall':  27, 'wood_low_wall':  68, 'wood_door':  50, 'wood_low_door':  30,
     'stone_floor': 84, 'wood_floor': 62, 'wood_floor_light': 67,
-    'unknown': 99
+    'unknown': 99,
+    'marker_open': -1, 'marker_closed': -2
 };
 const ID_TO_TYPE = {};
 for (const [k, v] of Object.entries(OBJECT_IDS)) ID_TO_TYPE[v] = k;
@@ -482,7 +680,9 @@ for (const [k, v] of Object.entries(OBJECT_IDS)) ID_TO_TYPE[v] = k;
 // ─── STATE ─────────────────────────────────────────────────────────────────
 let canvas, ctx;
 let scale = 1.0, panX = 0, panY = 0, baseSize = 600;
-let specialObjects = [], floorObjects = [];
+let specialObjects = [], floorObjects = [], markerObjects = [];
+// storage: { 'col,row': [ {src, name} x 24 slots ] }
+const fridgeStorage = {};
 let selectedType = 'metal_wall';
 let ghostRow = -1, ghostCol = -1, ghostRotation = 0;
 let currentMode = MODES.CLICK;
@@ -508,7 +708,7 @@ function getCellFromScreen(sx, sy) {
 }
 
 function updateBlockCount() {
-    document.getElementById('block-count').textContent = specialObjects.length + floorObjects.length;
+    document.getElementById('block-count').textContent = specialObjects.length + floorObjects.length + markerObjects.length;
 }
 
 function showToast(msg) {
@@ -703,6 +903,22 @@ function drawObject(worldCtx, type, cx, cy, cellSize, rotation, alpha) {
         worldCtx.lineWidth = 1 / scale;
         worldCtx.strokeRect(-h, -h, s, s);
 
+    } else if (cfg.shapeType === 'marker') {
+        // Floating badge marker drawn on top of other objects
+        const r = h * 0.38;
+        worldCtx.beginPath();
+        worldCtx.arc(0, 0, r, 0, Math.PI * 2);
+        worldCtx.fillStyle = cfg.color;
+        worldCtx.fill();
+        worldCtx.strokeStyle = 'rgba(255,255,255,0.7)';
+        worldCtx.lineWidth = 1.5 / scale;
+        worldCtx.stroke();
+        worldCtx.fillStyle = '#fff';
+        worldCtx.font = `bold ${Math.round(r * 1.1)}px sans-serif`;
+        worldCtx.textAlign = 'center';
+        worldCtx.textBaseline = 'middle';
+        worldCtx.fillText(type === 'marker_open' ? 'O' : 'C', 0, 0);
+
     } else {
         worldCtx.fillStyle = cfg.color;
         worldCtx.fillRect(-h, -h, s, s);
@@ -778,6 +994,13 @@ function drawGrid() {
         const cx = obj.col * cellSize + cellSize / 2;
         const cy = obj.row * cellSize + cellSize / 2;
         drawObject(ctx, obj.type, cx, cy, cellSize, obj.rotation, 1.0);
+    }
+
+    // Markers drawn on top of everything
+    for (const obj of markerObjects) {
+        const cx = obj.col * cellSize + cellSize / 2;
+        const cy = obj.row * cellSize + cellSize / 2;
+        drawObject(ctx, obj.type, cx, cy, cellSize, 0, 1.0);
     }
 
     ctx.restore();
@@ -915,6 +1138,18 @@ const FLOOR_TYPES = new Set(['tiled_floor', 'stone_floor', 'wood_floor', 'wood_f
 function isFloor(type) { return FLOOR_TYPES.has(type); }
 
 function placeObject(cell) {
+    const cfg = OBJECT_CONFIGS[selectedType];
+    if (cfg?.shapeType === 'marker') {
+        const idx = markerObjects.findIndex(o => o.row === cell.row && o.col === cell.col);
+        if (idx !== -1 && markerObjects[idx].type === selectedType) {
+            markerObjects.splice(idx, 1); // remove if same type clicked again
+        } else {
+            if (idx !== -1) markerObjects.splice(idx, 1); // replace different marker
+            markerObjects.push({ type: selectedType, row: cell.row, col: cell.col });
+        }
+        updateBlockCount();
+        return;
+    }
     if (isFloor(selectedType)) {
         const idx = floorObjects.findIndex(o => o.row === cell.row && o.col === cell.col);
         if (idx === -1) floorObjects.push({ type: selectedType, row: cell.row, col: cell.col, id: OBJECT_IDS[selectedType], rotation: 0 });
@@ -964,6 +1199,7 @@ function applyDelete(start, end) {
     const sy = Math.min(start.row, end.row), ey = Math.max(start.row, end.row);
     specialObjects = specialObjects.filter(o => !(o.col >= sx && o.col <= ex && o.row >= sy && o.row <= ey));
     floorObjects = floorObjects.filter(o => !(o.col >= sx && o.col <= ex && o.row >= sy && o.row <= ey));
+    markerObjects = markerObjects.filter(o => !(o.col >= sx && o.col <= ex && o.row >= sy && o.row <= ey));
     updateBlockCount();
 }
 
@@ -999,7 +1235,9 @@ function applyClonePaste(cell) {
 // ─── MAP CODE ──────────────────────────────────────────────────────────────
 function generateCode() {
     const rotMap = { 0: 0, 90: 1, 180: 2, 270: 3 };
+    const isMarker = o => OBJECT_CONFIGS[o.type]?.shapeType === 'marker';
     return [...floorObjects, ...specialObjects]
+        .filter(o => !isMarker(o))
         .map(o => `!b=${o.id}:${o.col}:${o.row}:${rotMap[o.rotation] ?? 0}`)
         .join('');
 }
@@ -1022,7 +1260,7 @@ function generateAndCopy() {
 function loadFromPanel() {
     const code = document.getElementById('code-textarea').value.trim();
     if (!code) { showToast('Paste code first!'); return; }
-    specialObjects = []; floorObjects = [];
+    specialObjects = []; floorObjects = []; markerObjects = [];
     const re = /!b=(\d+):(\d+):(\d+):(\d+)/g;
     const rotDeg = { 0: 0, 1: 90, 2: 180, 3: 270 };
     let m, count = 0;
@@ -1044,7 +1282,8 @@ function loadFromPanel() {
 
 function clearAll() {
     if (!confirm('Clear all blocks?')) return;
-    specialObjects = []; floorObjects = [];
+    specialObjects = []; floorObjects = []; markerObjects = [];
+    Object.keys(fridgeStorage).forEach(k => delete fridgeStorage[k]);
     clonedArea = null; actionStartCell = null;
     updateBlockCount();
     drawGrid();
@@ -1198,7 +1437,138 @@ function onKeyDown(e) {
     }
 }
 
-// ─── HELP ──────────────────────────────────────────────────────────────────
+// ─── STORAGE UI ────────────────────────────────────────────────────────────
+const STORAGE_SLOTS = 24;
+let activeStorageKey = null;
+let dragItem = null; // { src, name }
+
+function openStorage(col, row) {
+    activeStorageKey = `${col},${row}`;
+    if (!fridgeStorage[activeStorageKey]) {
+        fridgeStorage[activeStorageKey] = Array(STORAGE_SLOTS).fill(null);
+    }
+    renderStorageGrid();
+    document.getElementById('storage-overlay').classList.remove('hidden');
+}
+
+function closeStorage(e) {
+    if (e && e.target !== document.getElementById('storage-overlay') && e.type !== 'click') return;
+    document.getElementById('storage-overlay').classList.add('hidden');
+    activeStorageKey = null;
+}
+
+function renderStorageGrid() {
+    const grid = document.getElementById('storage-grid');
+    grid.innerHTML = '';
+    const slots = fridgeStorage[activeStorageKey];
+    slots.forEach((item, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'storage-slot';
+        slot.dataset.index = i;
+
+        if (item) {
+            const img = document.createElement('img');
+            img.src = item.src;
+            img.title = item.name;
+            slot.appendChild(img);
+            const rem = document.createElement('div');
+            rem.className = 'slot-remove';
+            rem.textContent = '×';
+            rem.onclick = (e) => { e.stopPropagation(); slots[i] = null; renderStorageGrid(); };
+            slot.appendChild(rem);
+        }
+
+        // Drag-over highlighting
+        slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('drag-over'); });
+        slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+        slot.addEventListener('drop', e => {
+            e.preventDefault();
+            slot.classList.remove('drag-over');
+            const data = e.dataTransfer.getData('application/json');
+            if (!data) return;
+            const item = JSON.parse(data);
+            slots[i] = item;
+            renderStorageGrid();
+        });
+
+        // Manual drag support (for non-HTML5 drag from canvas area)
+        slot.addEventListener('mouseup', () => {
+            if (dragItem) { slots[i] = dragItem; renderStorageGrid(); }
+        });
+
+        grid.appendChild(slot);
+    });
+}
+
+// ─── ITEM PANEL ─────────────────────────────────────────────────────────────
+// Items registry — add entries here when resources are available
+// Format: { name: 'Iron', src: './item-iron.png' }
+const ITEMS = [
+    // e.g. { name: 'Iron', src: './item-iron.png' },
+];
+
+function buildItemPanel() {
+    const grid = document.getElementById('item-grid');
+    grid.innerHTML = '';
+
+    if (ITEMS.length === 0) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'item-cell';
+        placeholder.style.opacity = '0.3';
+        placeholder.style.cursor = 'default';
+        placeholder.innerHTML = '<div style="color:#444;font-size:18px;font-family:sans-serif;">+</div><div class="item-tooltip">No items yet</div>';
+        grid.appendChild(placeholder);
+        return;
+    }
+
+    ITEMS.forEach(item => {
+        const cell = document.createElement('div');
+        cell.className = 'item-cell';
+        cell.draggable = true;
+
+        const img = document.createElement('img');
+        img.src = item.src;
+        img.alt = item.name;
+        cell.appendChild(img);
+
+        const tip = document.createElement('div');
+        tip.className = 'item-tooltip';
+        tip.textContent = item.name;
+        cell.appendChild(tip);
+
+        // HTML5 drag
+        cell.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('application/json', JSON.stringify(item));
+            e.dataTransfer.effectAllowed = 'copy';
+        });
+
+        // Manual drag ghost for non-modal dragging
+        cell.addEventListener('mousedown', () => {
+            dragItem = item;
+            const ghost = document.getElementById('drag-ghost');
+            ghost.querySelector('img').src = item.src;
+            ghost.style.display = 'block';
+        });
+
+        grid.appendChild(cell);
+    });
+}
+
+// Drag ghost follow
+document.addEventListener('mousemove', e => {
+    if (!dragItem) return;
+    const ghost = document.getElementById('drag-ghost');
+    ghost.style.left = e.clientX + 'px';
+    ghost.style.top = e.clientY + 'px';
+});
+
+document.addEventListener('mouseup', () => {
+    dragItem = null;
+    const ghost = document.getElementById('drag-ghost');
+    ghost.style.display = 'none';
+});
+
+
 function showHelp() { document.getElementById('help-overlay').classList.remove('hidden'); }
 function hideHelp() { document.getElementById('help-overlay').classList.add('hidden'); }
 
@@ -1225,7 +1595,15 @@ window.onload = function() {
     canvas.addEventListener('mousemove', onMouseMove);
     canvas.addEventListener('mouseup', onMouseUp);
     canvas.addEventListener('wheel', onWheel, { passive: false });
-    canvas.addEventListener('contextmenu', e => e.preventDefault());
+    canvas.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        if (didPan) return; // was a pan drag
+        const { x, y } = getCanvasPos(e);
+        const cell = getCellFromScreen(x, y);
+        if (!cell) return;
+        const obj = specialObjects.find(o => o.row === cell.row && o.col === cell.col && o.type === 'fridge');
+        if (obj) openStorage(cell.col, cell.row);
+    });
     canvas.addEventListener('mouseleave', () => { ghostRow = -1; ghostCol = -1; isPanning = false; drawGrid(); });
     document.addEventListener('keydown', onKeyDown);
     window.addEventListener('resize', resize);
@@ -1237,6 +1615,7 @@ window.onload = function() {
     // Load sprites then build icon grid and draw
     loadSprites(SPRITE_B64, () => {
         buildSpriteGrid();
+        buildItemPanel();
         drawGrid();
     });
 };
