@@ -358,66 +358,85 @@
         #storage-overlay.hidden { display: none; }
         #storage-modal {
             background: #1a1f1a;
-            border: 2px solid #555;
+            border: 2px solid #4a6a4a;
             border-radius: 8px;
             padding: 16px;
-            width: 340px;
+            width: 220px;
             color: #ccc;
             position: relative;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
         }
         #storage-modal h3 {
             color: #9abe5a;
-            font-size: 14px;
+            font-size: 13px;
             margin-bottom: 4px;
-            font-family: 'Segoe UI', Tahoma, sans-serif;
         }
         #storage-modal .storage-subtitle {
-            color: #666;
+            color: #555;
             font-size: 10px;
             margin-bottom: 12px;
-            font-family: 'Segoe UI', Tahoma, sans-serif;
         }
         #storage-grid {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 4px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
             margin-bottom: 12px;
         }
         .storage-slot {
-            width: 44px;
-            height: 44px;
+            width: 80px;
+            height: 80px;
             background: #0d1a0d;
-            border: 2px solid #333;
-            border-radius: 4px;
+            border: 2px solid #2a3a2a;
+            border-radius: 6px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             position: relative;
-            transition: border-color 0.1s;
+            transition: border-color 0.15s, background 0.15s;
+            gap: 4px;
         }
-        .storage-slot:hover { border-color: #7a9a4a; }
-        .storage-slot.drag-over { border-color: #9abe5a; background: #1a3a1a; }
+        .storage-slot:hover { border-color: #7a9a4a; background: #152015; }
+        .storage-slot.empty-slot { border-style: dashed; border-color: #2a3a2a; }
+        .storage-slot.empty-slot:hover { border-color: #5a7a4a; }
         .storage-slot img {
-            width: 36px;
-            height: 36px;
+            width: 52px;
+            height: 52px;
             object-fit: contain;
             image-rendering: pixelated;
             pointer-events: none;
         }
+        .storage-slot .slot-name {
+            font-size: 8px;
+            color: #7a9a5a;
+            text-align: center;
+            padding: 0 2px;
+            line-height: 1.2;
+            max-width: 74px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .storage-slot .slot-empty-label {
+            font-size: 10px;
+            color: #2a4a2a;
+        }
         .storage-slot .slot-remove {
             display: none;
             position: absolute;
-            top: -6px; right: -6px;
-            width: 14px; height: 14px;
+            top: -7px; right: -7px;
+            width: 16px; height: 16px;
             background: #8c3e3e;
             border-radius: 50%;
-            font-size: 9px;
+            font-size: 10px;
             color: #fff;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             z-index: 2;
+            font-weight: bold;
+            line-height: 1;
         }
         .storage-slot:hover .slot-remove { display: flex; }
         #storage-close-btn {
@@ -433,90 +452,103 @@
             font-family: 'Segoe UI', Tahoma, sans-serif;
         }
         #storage-close-btn:hover { background: #3a4a3a; }
-        .storage-chest-img {
-            width: 100%;
-            height: 80px;
-            object-fit: contain;
-            image-rendering: pixelated;
-            margin-bottom: 10px;
-            opacity: 0.85;
-        }
 
-        /* ─── ITEM PANEL (right panel items for dragging) ── */
-        #item-panel {
-            padding: 6px 8px 8px;
-            border-top: 2px solid #444;
-            background: rgba(10,15,10,0.6);
+        /* ─── ITEM PICKER MODAL ──────────────────── */
+        #picker-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 200;
         }
-        #item-panel .item-section-label {
-            color: #6a8a4a;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 4px;
-            display: block;
+        #picker-overlay.hidden { display: none; }
+        #picker-modal {
+            background: #141a14;
+            border: 2px solid #4a6a4a;
+            border-radius: 8px;
+            padding: 14px;
+            width: 340px;
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
         }
-        #item-grid {
+        #picker-modal h4 {
+            color: #9abe5a;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        #picker-search {
+            width: 100%;
+            background: #0d140d;
+            border: 1px solid #3a5a3a;
+            border-radius: 4px;
+            color: #c8e88a;
+            font-size: 11px;
+            padding: 5px 8px;
+            margin-bottom: 8px;
+            outline: none;
+            font-family: monospace;
+            box-sizing: border-box;
+        }
+        #picker-search:focus { border-color: #7a9a4a; }
+        #picker-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 3px;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+            overflow-y: auto;
+            flex: 1;
         }
-        .item-cell {
+        #picker-grid::-webkit-scrollbar { width: 4px; }
+        #picker-grid::-webkit-scrollbar-track { background: #0d140d; }
+        #picker-grid::-webkit-scrollbar-thumb { background: #4a6a4a; border-radius: 2px; }
+        .picker-item {
             aspect-ratio: 1;
             background: #1a2a1a;
             border: 2px solid #2a3a2a;
-            border-radius: 3px;
-            cursor: grab;
-            overflow: hidden;
+            border-radius: 4px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            cursor: pointer;
             position: relative;
-            transition: border-color 0.1s;
+            transition: border-color 0.1s, background 0.1s;
+            padding: 2px;
+            gap: 2px;
         }
-        .item-cell:hover { border-color: #6a9a4a; }
-        .item-cell:active { cursor: grabbing; }
-        .item-cell img {
-            width: 85%;
-            height: 85%;
+        .picker-item:hover { border-color: #9abe5a; background: #1e2e1e; }
+        .picker-item img {
+            width: 80%;
+            height: 80%;
             object-fit: contain;
             image-rendering: pixelated;
             pointer-events: none;
         }
-        .item-cell .item-tooltip {
-            display: none;
-            position: absolute;
-            bottom: calc(100% + 4px);
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.9);
-            color: #ddd;
-            font-size: 10px;
-            padding: 3px 6px;
-            border-radius: 3px;
+        .picker-item .picker-name {
+            font-size: 7px;
+            color: #7a9a5a;
+            text-align: center;
+            line-height: 1.1;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
             white-space: nowrap;
-            z-index: 100;
-            pointer-events: none;
+            padding: 0 1px;
+        }
+        #picker-cancel-btn {
+            margin-top: 8px;
+            width: 100%;
+            padding: 6px;
+            background: #2a1a1a;
+            border: 1px solid #6a3a3a;
+            border-radius: 4px;
+            color: #f58a8a;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
             font-family: 'Segoe UI', Tahoma, sans-serif;
         }
-        .item-cell:hover .item-tooltip { display: block; }
-
-        /* ─── DRAG GHOST ─────────────────────────── */
-        #drag-ghost {
-            position: fixed;
-            width: 40px; height: 40px;
-            pointer-events: none;
-            z-index: 9999;
-            display: none;
-            transform: translate(-50%, -50%);
-        }
-        #drag-ghost img {
-            width: 100%; height: 100%;
-            object-fit: contain;
-            image-rendering: pixelated;
-            opacity: 0.85;
-        }
+        #picker-cancel-btn:hover { background: #3a2a2a; }
     </style>
 </head>
 <body>
@@ -551,17 +583,6 @@
 
         <div id="sprite-panel">
             <div id="sprite-grid"></div>
-        </div>
-        <!-- Item panel for dragging into storage -->
-        <div id="item-panel">
-            <span class="item-section-label">📦 Items (drag into storage)</span>
-            <div id="item-grid">
-                <!-- Items added here dynamically; empty until resources are added -->
-                <div class="item-cell" style="opacity:0.3;cursor:default;">
-                    <div style="color:#444;font-size:18px;">+</div>
-                    <div class="item-tooltip">No items yet</div>
-                </div>
-            </div>
         </div>
         <div id="code-panel">
             <label>Map Code</label>
@@ -611,15 +632,21 @@
 <div id="storage-overlay" class="hidden" onclick="closeStorage(event)">
     <div id="storage-modal" onclick="event.stopPropagation()">
         <h3>🧊 Fridge Storage</h3>
-        <div class="storage-subtitle">Drag items from the right panel into slots. Right-click a slot to clear it.</div>
-        <img src="./chest-box4.png" class="storage-chest-img" alt="chest">
+        <div class="storage-subtitle">Click a slot to assign an item. Hover + × to clear.</div>
         <div id="storage-grid"></div>
         <button id="storage-close-btn" onclick="closeStorage()">Close</button>
     </div>
 </div>
 
-<!-- Drag ghost that follows cursor -->
-<div id="drag-ghost"><img src="" alt=""></div>
+<!-- Item Picker Modal -->
+<div id="picker-overlay" class="hidden" onclick="closePicker()">
+    <div id="picker-modal" onclick="event.stopPropagation()">
+        <h4>📦 Choose an Item</h4>
+        <input id="picker-search" type="text" placeholder="Search items..." oninput="filterPicker(this.value)">
+        <div id="picker-grid"></div>
+        <button id="picker-cancel-btn" onclick="closePicker()">Cancel</button>
+    </div>
+</div>
 
 <script>
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────
@@ -1438,9 +1465,9 @@ function onKeyDown(e) {
 }
 
 // ─── STORAGE UI ────────────────────────────────────────────────────────────
-const STORAGE_SLOTS = 24;
+const STORAGE_SLOTS = 4;
 let activeStorageKey = null;
-let dragItem = null; // { src, name }
+let activeSlotIndex = null;
 
 function openStorage(col, row) {
     activeStorageKey = `${col},${row}`;
@@ -1452,7 +1479,7 @@ function openStorage(col, row) {
 }
 
 function closeStorage(e) {
-    if (e && e.target !== document.getElementById('storage-overlay') && e.type !== 'click') return;
+    if (e && e.target !== document.getElementById('storage-overlay')) return;
     document.getElementById('storage-overlay').classList.add('hidden');
     activeStorageKey = null;
 }
@@ -1463,110 +1490,99 @@ function renderStorageGrid() {
     const slots = fridgeStorage[activeStorageKey];
     slots.forEach((item, i) => {
         const slot = document.createElement('div');
-        slot.className = 'storage-slot';
-        slot.dataset.index = i;
+        slot.className = 'storage-slot' + (item ? '' : ' empty-slot');
 
         if (item) {
             const img = document.createElement('img');
             img.src = item.src;
             img.title = item.name;
             slot.appendChild(img);
+            const nameEl = document.createElement('div');
+            nameEl.className = 'slot-name';
+            nameEl.textContent = item.name;
+            slot.appendChild(nameEl);
             const rem = document.createElement('div');
             rem.className = 'slot-remove';
             rem.textContent = '×';
             rem.onclick = (e) => { e.stopPropagation(); slots[i] = null; renderStorageGrid(); };
             slot.appendChild(rem);
+        } else {
+            const label = document.createElement('div');
+            label.className = 'slot-empty-label';
+            label.textContent = 'Empty';
+            slot.appendChild(label);
         }
 
-        // Drag-over highlighting
-        slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('drag-over'); });
-        slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
-        slot.addEventListener('drop', e => {
-            e.preventDefault();
-            slot.classList.remove('drag-over');
-            const data = e.dataTransfer.getData('application/json');
-            if (!data) return;
-            const item = JSON.parse(data);
-            slots[i] = item;
-            renderStorageGrid();
-        });
-
-        // Manual drag support (for non-HTML5 drag from canvas area)
-        slot.addEventListener('mouseup', () => {
-            if (dragItem) { slots[i] = dragItem; renderStorageGrid(); }
-        });
-
+        slot.onclick = () => { activeSlotIndex = i; openPicker(); };
         grid.appendChild(slot);
     });
 }
 
-// ─── ITEM PANEL ─────────────────────────────────────────────────────────────
-// Items registry — add entries here when resources are available
-// Format: { name: 'Iron', src: './item-iron.png' }
-const ITEMS = [
-    // e.g. { name: 'Iron', src: './item-iron.png' },
+// ─── ITEM PICKER ────────────────────────────────────────────────────────────
+// To add items: just add the item slug to the list below (the part between inv- and -in.png)
+// e.g. 'iron' → loads inv-iron-in.png and displays as "Iron"
+const ITEM_SLUGS = [
+    '9mm', 'acorn', 'agitator', 'ak47', 'alloys',
+    // ADD MORE HERE — just the name part, e.g. 'iron', 'wood', 'cloth'
 ];
 
-function buildItemPanel() {
-    const grid = document.getElementById('item-grid');
-    grid.innerHTML = '';
+const ITEMS = ITEM_SLUGS.map(slug => ({
+    src: `./inv-${slug}-in.png`,
+    name: slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}));
 
-    if (ITEMS.length === 0) {
-        const placeholder = document.createElement('div');
-        placeholder.className = 'item-cell';
-        placeholder.style.opacity = '0.3';
-        placeholder.style.cursor = 'default';
-        placeholder.innerHTML = '<div style="color:#444;font-size:18px;font-family:sans-serif;">+</div><div class="item-tooltip">No items yet</div>';
-        grid.appendChild(placeholder);
+let pickerItems = [...ITEMS];
+
+function openPicker() {
+    document.getElementById('picker-search').value = '';
+    filterPicker('');
+    document.getElementById('picker-overlay').classList.remove('hidden');
+    document.getElementById('picker-search').focus();
+}
+
+function closePicker() {
+    document.getElementById('picker-overlay').classList.add('hidden');
+    activeSlotIndex = null;
+}
+
+function filterPicker(query) {
+    const q = query.toLowerCase();
+    pickerItems = ITEMS.filter(it => it.name.toLowerCase().includes(q));
+    renderPickerGrid();
+}
+
+function renderPickerGrid() {
+    const grid = document.getElementById('picker-grid');
+    grid.innerHTML = '';
+    if (pickerItems.length === 0) {
+        grid.innerHTML = '<div style="color:#444;font-size:11px;padding:12px;grid-column:1/-1;font-family:sans-serif;">No items found</div>';
         return;
     }
-
-    ITEMS.forEach(item => {
+    pickerItems.forEach(item => {
         const cell = document.createElement('div');
-        cell.className = 'item-cell';
-        cell.draggable = true;
-
+        cell.className = 'picker-item';
         const img = document.createElement('img');
         img.src = item.src;
         img.alt = item.name;
+        // Handle missing image gracefully
+        img.onerror = () => { img.style.opacity = '0.2'; };
         cell.appendChild(img);
-
-        const tip = document.createElement('div');
-        tip.className = 'item-tooltip';
-        tip.textContent = item.name;
-        cell.appendChild(tip);
-
-        // HTML5 drag
-        cell.addEventListener('dragstart', e => {
-            e.dataTransfer.setData('application/json', JSON.stringify(item));
-            e.dataTransfer.effectAllowed = 'copy';
-        });
-
-        // Manual drag ghost for non-modal dragging
-        cell.addEventListener('mousedown', () => {
-            dragItem = item;
-            const ghost = document.getElementById('drag-ghost');
-            ghost.querySelector('img').src = item.src;
-            ghost.style.display = 'block';
-        });
-
+        const name = document.createElement('div');
+        name.className = 'picker-name';
+        name.textContent = item.name;
+        cell.appendChild(name);
+        cell.onclick = () => {
+            if (activeStorageKey !== null && activeSlotIndex !== null) {
+                fridgeStorage[activeStorageKey][activeSlotIndex] = item;
+                renderStorageGrid();
+            }
+            closePicker();
+        };
         grid.appendChild(cell);
     });
 }
 
-// Drag ghost follow
-document.addEventListener('mousemove', e => {
-    if (!dragItem) return;
-    const ghost = document.getElementById('drag-ghost');
-    ghost.style.left = e.clientX + 'px';
-    ghost.style.top = e.clientY + 'px';
-});
-
-document.addEventListener('mouseup', () => {
-    dragItem = null;
-    const ghost = document.getElementById('drag-ghost');
-    ghost.style.display = 'none';
-});
+function buildItemPanel() { /* no-op: item panel removed, picker is modal */ }
 
 
 function showHelp() { document.getElementById('help-overlay').classList.remove('hidden'); }
