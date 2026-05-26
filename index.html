@@ -1519,17 +1519,45 @@ function renderStorageGrid() {
 }
 
 // ─── ITEM PICKER ────────────────────────────────────────────────────────────
-// To add items: just add the item slug to the list below (the part between inv- and -in.png)
-// e.g. 'iron' → loads inv-iron-in.png and displays as "Iron"
+// Full item list — add new slugs here as 'slug' (loads inv-[slug]-in.png)
+// For odd filenames (different suffix), add as { slug, suffix } instead
 const ITEM_SLUGS = [
-    '9mm', 'acorn', 'agitator', 'ak47', 'alloys',
-    // ADD MORE HERE — just the name part, e.g. 'iron', 'wood', 'cloth'
+    'C4', 'MP5', 'SWAT-suit', '9mm', 'acorn', 'agitator', 'ak47', 'alloys',
+    'animal-fat', 'animal-tendon', 'antidote-flower', 'antidote',
+    'automatic-door', 'bandage', 'bullet-shotgun', 'bullet-sniper',
+    'bunker-wall', 'cable-wall', 'campfire-bbq', 'campfire', 'can',
+    'chemical-component', 'coat', 'composter', 'cooked-steak', 'dynamite',
+    'electronic-part', 'extractor', 'fridge', 'gasoline', 'ghoul-blood',
+    'ghoul-drug', 'gladiator-helmet', 'grenade', 'hal-bot', 'hammer',
+    'headscarf', 'junk', 'lapabot', 'lapadoine',
+    'laser-sniper', 'laser-submachine', 'leather-boar',
+    'mushroom1', 'mushroom2', 'mushroom3', 'mustard-floor', 'nail-gun',
+    'nails', 'orange', 'orange-seed', 'platform', 'protective-suit',
+    'pumpkin', 'radiation-suit', 'raw-steak', 'red-floor',
+    'sawed-off-shotgun', 'seed-tree', 'shaped-metal', 'shaped-uranium',
+    'small-energy-cells', 'small-wire', 'smelter', 'sniper', 'soda',
+    'steel-door', 'steel-door1', 'steel', 'steel-pickaxe', 'steel-smallwall',
+    'steel-wall', 'stone-axe', 'stone-cave', 'stone-door', 'stone-door1',
+    'stone-floor', 'stone-smallwall', 'stone-wall', 'string',
+    'sulfur-axe', 'sulfur', 'sulfur-pickaxe', 'syringe', 'tesla-0',
+    'tesla-armor', 'tesla-bot', 'tiling-floor', 'tomato', 'tomato-seed',
+    'tomato-soup', 'uranium', 'weaving-machine', 'wires', 'wood',
+    'wood-spike', 'workbench', 'workbench2', 'workbench3',
+    // Odd suffixes:
+    { slug: 'laser-pistol', suffix: 'out' },
+    { slug: 'sleeping-bag', suffix: 'click' },
+    { slug: 'stone', suffix: 'out' },
+    // ADD MORE: just the slug, e.g. 'iron'
 ];
 
-const ITEMS = ITEM_SLUGS.map(slug => ({
-    src: `./inv-${slug}-in.png`,
-    name: slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}));
+const ITEMS = ITEM_SLUGS.map(entry => {
+    const slug = typeof entry === 'string' ? entry : entry.slug;
+    const suffix = typeof entry === 'string' ? 'in' : entry.suffix;
+    return {
+        src: `./inv-${slug}-${suffix}.png`,
+        name: slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    };
+});
 
 let pickerItems = [...ITEMS];
 
