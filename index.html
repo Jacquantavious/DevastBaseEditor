@@ -466,8 +466,8 @@
             border: 2px solid #4a6a4a;
             border-radius: 8px;
             padding: 14px;
-            width: 340px;
-            max-height: 70vh;
+            width: 400px;
+            max-height: 75vh;
             display: flex;
             flex-direction: column;
             font-family: 'Segoe UI', Tahoma, sans-serif;
@@ -476,6 +476,31 @@
             color: #9abe5a;
             font-size: 12px;
             margin-bottom: 8px;
+        }
+        #picker-cats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            margin-bottom: 8px;
+        }
+        .picker-cat-btn {
+            padding: 3px 8px;
+            background: #1a2a1a;
+            border: 1px solid #2a3a2a;
+            border-radius: 10px;
+            color: #6a8a4a;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            transition: all 0.1s;
+            white-space: nowrap;
+        }
+        .picker-cat-btn:hover { border-color: #6a9a4a; color: #9abe5a; }
+        .picker-cat-btn.active {
+            background: #2a4a1a;
+            border-color: #9abe5a;
+            color: #c8e88a;
         }
         #picker-search {
             width: 100%;
@@ -493,7 +518,7 @@
         #picker-search:focus { border-color: #7a9a4a; }
         #picker-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(6, 1fr);
             gap: 4px;
             overflow-y: auto;
             flex: 1;
@@ -592,6 +617,11 @@
                 <button id="load-btn" onclick="loadFromPanel()">Load</button>
                 <button id="clear-btn" onclick="clearAll()">Clear</button>
             </div>
+            <div class="code-action-row" style="margin-top:4px;">
+                <button onclick="exportBlueprint()" style="flex:1;padding:5px 4px;border-radius:3px;border:1px solid #7a5aaa;background:#2a1a4a;color:#d4aaf5;font-size:10px;font-weight:700;cursor:pointer;">💾 Save Blueprint</button>
+                <button onclick="document.getElementById('blueprint-file').click()" style="flex:1;padding:5px 4px;border-radius:3px;border:1px solid #5aaa7a;background:#1a4a2a;color:#aaf5d4;font-size:10px;font-weight:700;cursor:pointer;">📂 Load Blueprint</button>
+            </div>
+            <input type="file" id="blueprint-file" accept=".json" style="display:none" onchange="importBlueprint(event)">
         </div>
     </div>
 </div>
@@ -642,6 +672,7 @@
 <div id="picker-overlay" class="hidden" onclick="closePicker()">
     <div id="picker-modal" onclick="event.stopPropagation()">
         <h4>📦 Choose an Item</h4>
+        <div id="picker-cats"></div>
         <input id="picker-search" type="text" placeholder="Search items..." oninput="filterPicker(this.value)">
         <div id="picker-grid"></div>
         <button id="picker-cancel-btn" onclick="closePicker()">Cancel</button>
@@ -1519,50 +1550,69 @@ function renderStorageGrid() {
 }
 
 // ─── ITEM PICKER ────────────────────────────────────────────────────────────
-// Full item list — add new slugs here as 'slug' (loads inv-[slug]-in.png)
-// For odd filenames (different suffix), add as { slug, suffix } instead
-const ITEM_SLUGS = [
-    'C4', 'MP5', 'SWAT-suit', '9mm', 'acorn', 'agitator', 'ak47', 'alloys',
-    'animal-fat', 'animal-tendon', 'antidote-flower', 'antidote',
-    'automatic-door', 'bandage', 'bullet-shotgun', 'bullet-sniper',
-    'bunker-wall', 'cable-wall', 'campfire-bbq', 'campfire', 'can',
-    'chemical-component', 'coat', 'composter', 'cooked-steak', 'dynamite',
-    'electronic-part', 'extractor', 'fridge', 'gasoline', 'ghoul-blood',
-    'ghoul-drug', 'gladiator-helmet', 'grenade', 'hal-bot', 'hammer',
-    'headscarf', 'junk', 'lapabot', 'lapadoine',
-    'laser-sniper', 'laser-submachine', 'leather-boar',
-    'mushroom1', 'mushroom2', 'mushroom3', 'mustard-floor', 'nail-gun',
-    'nails', 'orange', 'orange-seed', 'platform', 'protective-suit',
-    'pumpkin', 'radiation-suit', 'raw-steak', 'red-floor',
-    'sawed-off-shotgun', 'seed-tree', 'shaped-metal', 'shaped-uranium',
-    'small-energy-cells', 'small-wire', 'smelter', 'sniper', 'soda',
-    'steel-door', 'steel-door1', 'steel', 'steel-pickaxe', 'steel-smallwall',
-    'steel-wall', 'stone-axe', 'stone-cave', 'stone-door', 'stone-door1',
-    'stone-floor', 'stone-smallwall', 'stone-wall', 'string',
-    'sulfur-axe', 'sulfur', 'sulfur-pickaxe', 'syringe', 'tesla-0',
-    'tesla-armor', 'tesla-bot', 'tiling-floor', 'tomato', 'tomato-seed',
-    'tomato-soup', 'uranium', 'weaving-machine', 'wires', 'wood',
-    'wood-spike', 'workbench', 'workbench2', 'workbench3',
-    // Odd suffixes:
-    { slug: 'laser-pistol', suffix: 'out' },
-    { slug: 'sleeping-bag', suffix: 'click' },
-    { slug: 'stone', suffix: 'out' },
-    // ADD MORE: just the slug, e.g. 'iron'
-];
+const ITEM_CATEGORIES = {
+    'Resources': [
+        'alloys', 'animal-fat', 'animal-tendon', 'can', 'chemical-component',
+        'electronic-part', 'gasoline', 'ghoul-blood', 'junk', 'nails',
+        'shaped-metal', 'shaped-uranium', 'small-energy-cells', 'small-wire',
+        'steel', 'stone', 'string', 'sulfur', 'uranium', 'wires', 'wood',
+        'acorn', 'antidote-flower', 'ghoul-drug', 'lapadoine', 'mushroom1',
+        'mushroom2', 'mushroom3', 'orange', 'orange-seed', 'pumpkin',
+        'seed-tree', 'tomato', 'tomato-seed',
+    ],
+    'Food & Medical': [
+        'antidote', 'bandage', 'campfire-bbq', 'campfire', 'cooked-steak',
+        'raw-steak', 'soda', 'syringe', 'tomato-soup',
+    ],
+    'Weapons': [
+        '9mm', 'ak47', 'bullet-shotgun', 'bullet-sniper', 'C4', 'dynamite',
+        'grenade', { slug: 'laser-pistol', suffix: 'out' }, 'laser-sniper',
+        'laser-submachine', 'MP5', 'nail-gun', 'sawed-off-shotgun', 'sniper',
+    ],
+    'Tools': [
+        'agitator', 'extractor', 'hammer', 'steel-pickaxe', 'stone-axe',
+        'sulfur-axe', 'sulfur-pickaxe',
+    ],
+    'Armor': [
+        'coat', 'gladiator-helmet', 'headscarf', 'leather-boar', 'protective-suit',
+        'radiation-suit', 'SWAT-suit', 'tesla-armor',
+    ],
+    'Bots & Tech': [
+        'hal-bot', 'lapabot', 'tesla-bot',
+    ],
+    'Building': [
+        'automatic-door', 'bunker-wall', 'cable-wall', 'mustard-floor',
+        'platform', 'red-floor', { slug: 'sleeping-bag', suffix: 'click' },
+        'steel-door', 'steel-door1', 'steel-smallwall', 'steel-wall',
+        'stone-cave', 'stone-door', 'stone-door1', 'stone-floor',
+        'stone-smallwall', 'stone-wall', 'tiling-floor', 'wood-spike',
+    ],
+    'Workbenches': [
+        'composter', 'fridge', 'smelter', 'weaving-machine',
+        'workbench', 'workbench2', 'workbench3', 'tesla-0',
+    ],
+};
 
-const ITEMS = ITEM_SLUGS.map(entry => {
-    const slug = typeof entry === 'string' ? entry : entry.slug;
-    const suffix = typeof entry === 'string' ? 'in' : entry.suffix;
-    return {
-        src: `./inv-${slug}-${suffix}.png`,
-        name: slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-    };
-});
+// Flatten to a lookup for search
+const ITEMS = Object.entries(ITEM_CATEGORIES).flatMap(([cat, slugs]) =>
+    slugs.map(entry => {
+        const slug = typeof entry === 'string' ? entry : entry.slug;
+        const suffix = typeof entry === 'string' ? 'in' : entry.suffix;
+        return {
+            src: `./inv-${slug}-${suffix}.png`,
+            name: slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+            category: cat
+        };
+    })
+);
 
 let pickerItems = [...ITEMS];
+let activeCategory = 'All';
 
 function openPicker() {
+    activeCategory = 'All';
     document.getElementById('picker-search').value = '';
+    renderCategoryTabs();
     filterPicker('');
     document.getElementById('picker-overlay').classList.remove('hidden');
     document.getElementById('picker-search').focus();
@@ -1575,8 +1625,32 @@ function closePicker() {
 
 function filterPicker(query) {
     const q = query.toLowerCase();
-    pickerItems = ITEMS.filter(it => it.name.toLowerCase().includes(q));
+    pickerItems = ITEMS.filter(it =>
+        (activeCategory === 'All' || it.category === activeCategory) &&
+        it.name.toLowerCase().includes(q)
+    );
     renderPickerGrid();
+}
+
+function setCategory(cat) {
+    activeCategory = cat;
+    document.getElementById('picker-search').value = '';
+    filterPicker('');
+    renderCategoryTabs();
+}
+
+function renderCategoryTabs() {
+    const bar = document.getElementById('picker-cats');
+    if (!bar) return;
+    const allCats = ['All', ...Object.keys(ITEM_CATEGORIES)];
+    bar.innerHTML = '';
+    allCats.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'picker-cat-btn' + (cat === activeCategory ? ' active' : '');
+        btn.textContent = cat;
+        btn.onclick = () => setCategory(cat);
+        bar.appendChild(btn);
+    });
 }
 
 function renderPickerGrid() {
@@ -1592,7 +1666,6 @@ function renderPickerGrid() {
         const img = document.createElement('img');
         img.src = item.src;
         img.alt = item.name;
-        // Handle missing image gracefully
         img.onerror = () => { img.style.opacity = '0.2'; };
         cell.appendChild(img);
         const name = document.createElement('div');
@@ -1610,8 +1683,51 @@ function renderPickerGrid() {
     });
 }
 
-function buildItemPanel() { /* no-op: item panel removed, picker is modal */ }
 
+// ─── BLUEPRINT EXPORT / IMPORT ─────────────────────────────────────────────
+function exportBlueprint() {
+    const blueprint = {
+        version: 1,
+        exported: new Date().toISOString(),
+        blocks: specialObjects.map(o => ({ type: o.type, row: o.row, col: o.col, id: o.id, rotation: o.rotation })),
+        floors: floorObjects.map(o => ({ type: o.type, row: o.row, col: o.col, id: o.id, rotation: o.rotation })),
+        markers: markerObjects.map(o => ({ type: o.type, row: o.row, col: o.col })),
+        storage: fridgeStorage,
+    };
+    const blob = new Blob([JSON.stringify(blueprint, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `devast-blueprint-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('Blueprint saved!');
+}
+
+function importBlueprint(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const bp = JSON.parse(e.target.result);
+            if (!bp.version || !bp.blocks) throw new Error('Invalid blueprint');
+            specialObjects = bp.blocks || [];
+            floorObjects = bp.floors || [];
+            markerObjects = bp.markers || [];
+            Object.keys(fridgeStorage).forEach(k => delete fridgeStorage[k]);
+            Object.assign(fridgeStorage, bp.storage || {});
+            scale = 1; panX = 0; panY = 0;
+            clonedArea = null; actionStartCell = null;
+            updateBlockCount();
+            drawGrid();
+            showToast(`Loaded ${specialObjects.length + floorObjects.length} blocks`);
+        } catch {
+            showToast('Invalid blueprint file!');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
 
 function showHelp() { document.getElementById('help-overlay').classList.remove('hidden'); }
 function hideHelp() { document.getElementById('help-overlay').classList.add('hidden'); }
