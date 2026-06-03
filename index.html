@@ -866,10 +866,15 @@ function drawObject(worldCtx, type, cx, cy, cellSize, rotation, alpha) {
             // 3-cell tall sprite: width = 1 cell, height = 3 cells
             drawW = s * 0.85;
             drawH = s * cfg.length * 0.92;
-        } else if (['workbench', 'firepit', 'feeder', 'weaving'].includes(type)) {
-            // Force these benches to always fill the full cell
+        } else if (type === 'workbench') {
+            // Sprite is 200×289: top ~200px is the square body, bottom ~89px is the hanging gear.
+            // Scale so the square body = exactly one cell, gear naturally overhangs below.
+            const spriteRatio = spriteH / spriteW; // ~1.445
             drawW = s;
-            drawH = s;
+            drawH = s * spriteRatio;
+            // Offset upward so the top of the sprite aligns with the top of the cell
+            drawOffsetY = -h;
+        } else if (['firepit', 'feeder', 'weaving'].includes(type)) {
         } else if (aspect > 1.5) {
             // Wide landscape sprite (low walls/doors) — flush to bottom of cell
             drawW = s;
