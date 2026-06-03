@@ -866,6 +866,10 @@ function drawObject(worldCtx, type, cx, cy, cellSize, rotation, alpha) {
             // 3-cell tall sprite: width = 1 cell, height = 3 cells
             drawW = s * 0.85;
             drawH = s * cfg.length * 0.92;
+        } else if (['workbench', 'firepit', 'feeder', 'weaving'].includes(type)) {
+            // Force these benches to always fill the full cell
+            drawW = s;
+            drawH = s;
         } else if (aspect > 1.5) {
             // Wide landscape sprite (low walls/doors) — flush to bottom of cell
             drawW = s;
