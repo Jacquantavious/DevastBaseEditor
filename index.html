@@ -866,24 +866,8 @@ function drawObject(worldCtx, type, cx, cy, cellSize, rotation, alpha) {
             // 3-cell tall sprite: width = 1 cell, height = 3 cells
             drawW = s * 0.85;
             drawH = s * cfg.length * 0.92;
-        } else if (type === 'workbench') {
-            // Sprite 200×289, no alpha. Body (square) ~0-195px, gear 195-289px.
-            // Draw body filling full cell, gear overlapping top of cell below.
-            const bodyPx = 195, gearPx = 94, totalPx = 289, w = 200;
-            // Draw body: source (0,0,200,195) → full cell
-            worldCtx.drawImage(img, 0, 0, w, bodyPx, -h, -h, s, s);
-            // Draw gear: source (0,195,200,94) → below cell, same width
-            const gearH = s * (gearPx / bodyPx);
-            worldCtx.drawImage(img, 0, bodyPx, w, gearPx, -h, h, s, gearH);
-            if ((alpha ?? 1.0) < 1.0) {
-                worldCtx.strokeStyle = 'rgba(255,255,255,0.6)';
-                worldCtx.lineWidth = 2 / scale;
-                worldCtx.strokeRect(-h, -h, s, s);
-            }
-            worldCtx.restore();
-            return;
-        } else if (type === 'firepit' || type === 'feeder' || type === 'weaving') {
-            // Force full cell — these sprites are square-ish
+        } else if (['workbench', 'firepit', 'feeder', 'weaving'].includes(type)) {
+            // Force full cell — fill exactly one grid tile
             drawW = s;
             drawH = s;
         } else if (aspect > 1.5) {
