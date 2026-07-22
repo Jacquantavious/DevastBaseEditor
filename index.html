@@ -779,6 +779,7 @@ const OBJECT_CONFIGS = {
     'stone_floor':      { name: 'Stone Floor',      color: '#606060', shapeType: 'floor',       length: 1, directional: false, section: 'Blocks' },
     'tiled_floor':      { name: 'Tiled Floor',      color: '#484848', shapeType: 'floor',       length: 1, directional: false, section: 'Blocks' },
     'bunker_wall':      { name: 'Bunker Wall',      color: '#5a5a52', shapeType: 'square',      length: 1, directional: false, section: 'Blocks' },
+    'cave_wall':        { name: 'Cave Wall',        color: '#6a6a62', shapeType: 'square',      length: 1, directional: false, section: 'Blocks' },
     'cable_wall':       { name: 'Cable Wall',       color: '#4a5a3a', shapeType: 'square',      length: 1, directional: false, section: 'Blocks' },
     'auto_door':        { name: 'Automatic Door',   color: '#707878', shapeType: 'door',        length: 1, directional: true,  section: 'Blocks' },
     'research':       { name: 'Research Table',   color: '#4C60F5', shapeType: 'rect3x1',     length: 3, directional: true,  section: 'Benches' },
@@ -806,7 +807,7 @@ const OBJECT_IDS = {
     'stone_wall': 28, 'stone_low_wall': 69, 'stone_door': 51, 'stone_low_door': 31,
     'wood_wall':  27, 'wood_low_wall':  68, 'wood_door':  50, 'wood_low_door':  30,
     'stone_floor': 84, 'wood_floor': 62, 'wood_floor_light': 67,
-    'bunker_wall': 153, 'cable_wall': 149, 'auto_door': 150,
+    'bunker_wall': 153, 'cave_wall': 152, 'cable_wall': 149, 'auto_door': 150,
     'unknown': 99,
     'marker_open': -1, 'marker_closed': -2
 };
@@ -896,6 +897,7 @@ const TYPE_TO_SPRITE = {
     'extractor':      'day-extractor-off',
     'agitator':       'day-agitator1-off',
     'bunker_wall':    'day-bunker-wall0',
+    'cave_wall':      'day-stone-cave0',
     'cable_wall':     'day-cable-wall',
     'auto_door':      'day-automatic-door-off',
 };
