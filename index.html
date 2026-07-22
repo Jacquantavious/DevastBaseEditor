@@ -119,8 +119,6 @@
             color: #cdf0d6;
         }
         .code-btn.green:hover { background: rgba(127,217,154,0.26); }
-        .help-btn { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.14); color: #cfd6d4; }
-        .help-btn:hover { background: rgba(255,255,255,0.12); }
 
         #block-count-display {
             margin-left: auto;
@@ -295,47 +293,6 @@
             z-index: 20;
             border-top-right-radius: 8px;
         }
-
-        /* ─── HELP MODAL ─────────────────────────── */
-        #help-overlay {
-            position: fixed; inset: 0;
-            background: rgba(10,12,13,0.55);
-            backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 100;
-        }
-        #help-overlay.hidden { display: none; }
-        #help-modal {
-            background: linear-gradient(180deg, rgba(52,58,62,0.85), rgba(30,34,37,0.9));
-            backdrop-filter: blur(20px) saturate(150%);
-            -webkit-backdrop-filter: blur(20px) saturate(150%);
-            border: 1px solid rgba(255,255,255,0.14);
-            border-radius: 18px;
-            padding: 26px;
-            max-width: 440px;
-            width: 90%;
-            color: #d3d9d7;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        }
-        #help-modal h2 { color: #a8ecb6; font-size: 18px; margin-bottom: 16px; }
-        #help-modal h3 { color: #8fbf9a; font-size: 13px; margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 1px; }
-        #help-modal ul { list-style: none; padding: 0; }
-        #help-modal li { font-size: 12px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.08); color: #b8bfbc; }
-        #help-modal li strong { color: #d3f5d9; }
-        #close-help-btn {
-            margin-top: 16px;
-            padding: 10px 20px;
-            background: rgba(127,217,154,0.18);
-            border: 1px solid rgba(143,213,162,0.5);
-            border-radius: 10px;
-            color: #d3f5d9;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 700;
-            width: 100%;
-            transition: all 0.15s;
-        }
-        #close-help-btn:hover { background: rgba(127,217,154,0.3); }
 
         /* ─── COPY TOAST ─────────────────────────── */
         #toast {
@@ -716,7 +673,6 @@
             <button class="mode-btn houses-btn" id="mode-btn-houses" onclick="openHousesMenu()">🏠 Houses</button>
             <div id="mode-bar-bottom">
                 <button id="rotate-btn" onclick="toggleRotation()" title="Rotate (R)">0°</button>
-                <button class="code-btn help-btn" onclick="showHelp()">? Help</button>
                 <div id="block-count-display">Blocks: <span id="block-count">0</span></div>
             </div>
         </div>
@@ -738,36 +694,6 @@
             </div>
             <input type="file" id="blueprint-file" accept=".json" style="display:none" onchange="importBlueprint(event)">
         </div>
-    </div>
-</div>
-
-<!-- Help Modal -->
-<div id="help-overlay" onclick="hideHelp()">
-    <div id="help-modal" onclick="event.stopPropagation()">
-        <h2>⚙ Base Editor Controls</h2>
-        <h3>Navigation</h3>
-        <ul>
-            <li><strong>Scroll Wheel</strong> — Zoom in/out at cursor</li>
-            <li><strong>Middle Click + Drag</strong> — Pan the map</li>
-            <li><strong>Right Click + Drag</strong> — Pan the map</li>
-            <li><strong>WASD / Arrow Keys</strong> — Pan the map</li>
-            <li><strong>R</strong> — Rotate selected block (directional blocks only)</li>
-            <li><strong>H</strong> — Toggle this help window</li>
-        </ul>
-        <h3>Placement Modes</h3>
-        <ul>
-            <li><strong>Click</strong> — Left-click to place; click occupied cell to remove</li>
-            <li><strong>Line</strong> — Click two points to draw a line of blocks</li>
-            <li><strong>Clone</strong> — Click two points to select area; then click to paste</li>
-            <li><strong>Delete</strong> — Click two points to erase an area</li>
-        </ul>
-        <h3>Map Code</h3>
-        <ul>
-            <li><strong>Copy Code</strong> — Generates and copies code to clipboard</li>
-            <li><strong>Load</strong> — Paste code into the box, then click Load</li>
-            <li><strong>Clear</strong> — Remove all placed blocks</li>
-        </ul>
-        <button id="close-help-btn" onclick="hideHelp()">Close — Start Building!</button>
     </div>
 </div>
 
@@ -1697,7 +1623,6 @@ function onKeyDown(e) {
         case 'a': case 'arrowleft':  panX += step; drawGrid(); break;
         case 'd': case 'arrowright': panX -= step; drawGrid(); break;
         case 'r': toggleRotation(); break;
-        case 'h': document.getElementById('help-overlay').classList.toggle('hidden'); break;
         case 'escape':
             if (actionStartCell) { actionStartCell = null; clonedArea = null; setMode(MODES.CLICK); }
             break;
@@ -1938,8 +1863,6 @@ function importBlueprint(event) {
     event.target.value = '';
 }
 
-function showHelp() { document.getElementById('help-overlay').classList.remove('hidden'); }
-function hideHelp() { document.getElementById('help-overlay').classList.add('hidden'); }
 
 // ─── RESIZE ────────────────────────────────────────────────────────────────
 function resize() {
