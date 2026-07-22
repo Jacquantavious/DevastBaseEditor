@@ -8,7 +8,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
             width: 100%; height: 100%;
-            background: #3a5c3e;
+            background: #22262a;
             font-family: 'Segoe UI', Tahoma, sans-serif;
             overflow: hidden;
             user-select: none;
@@ -33,12 +33,15 @@
             image-rendering: pixelated;
         }
 
-        /* ─── RIGHT PANEL ────────────────────────── */
+        /* ─── RIGHT PANEL (glass) ─────────────────── */
         #right-panel {
-            width: 220px;
-            min-width: 220px;
-            background: rgba(30,35,30,0.97);
-            border-left: 2px solid #555;
+            width: 228px;
+            min-width: 228px;
+            background: linear-gradient(180deg, rgba(52,58,62,0.72), rgba(36,40,44,0.78));
+            backdrop-filter: blur(18px) saturate(150%);
+            -webkit-backdrop-filter: blur(18px) saturate(150%);
+            border-left: 1px solid rgba(255,255,255,0.10);
+            box-shadow: -8px 0 30px rgba(0,0,0,0.35);
             display: flex;
             flex-direction: column;
             z-index: 10;
@@ -49,138 +52,143 @@
             align-items: center;
             justify-content: center;
             gap: 4px;
-            padding: 5px 6px;
-            background: #3a3f3a;
-            border: 1px solid #555;
-            border-radius: 4px;
-            color: #ccc;
+            padding: 7px 6px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 10px;
+            color: #cbd2d0;
             font-size: 11px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.1s;
+            transition: all 0.15s;
             letter-spacing: 0.5px;
             text-transform: uppercase;
             width: 100%;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
         }
-        .mode-btn:hover { background: #4a4f4a; color: #fff; border-color: #888; }
+        .mode-btn:hover { background: rgba(255,255,255,0.10); color: #fff; border-color: rgba(255,255,255,0.22); }
         .mode-btn.active {
-            background: #6b8c3e;
-            border-color: #9abe5a;
-            color: #e8f5c8;
-            box-shadow: 0 0 6px rgba(154,190,90,0.4);
+            background: rgba(127,217,154,0.18);
+            border-color: rgba(143,213,162,0.55);
+            color: #d6f5df;
+            box-shadow: 0 0 14px rgba(127,217,154,0.28), inset 0 1px 0 rgba(255,255,255,0.10);
         }
         .mode-btn.active-delete {
-            background: #8c3e3e;
-            border-color: #be5a5a;
-            color: #f5c8c8;
+            background: rgba(224,110,110,0.20);
+            border-color: rgba(224,130,130,0.55);
+            color: #ffd9d9;
+            box-shadow: 0 0 14px rgba(224,110,110,0.25);
         }
+        .houses-btn { margin-bottom: 6px; }
 
         /* ─── MODE BAR (top of right panel) ─────── */
         #mode-bar {
-            padding: 8px;
-            border-bottom: 2px solid #444;
-            background: rgba(15,20,15,0.9);
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: rgba(20,23,25,0.35);
         }
         #mode-bar-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 4px;
+            gap: 5px;
             margin-bottom: 6px;
         }
         #mode-bar-bottom {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
         }
 
         .code-btn {
-            padding: 4px 8px;
-            background: #2a4a6a;
-            border: 1px solid #4a7aaa;
-            border-radius: 4px;
-            color: #aad4f5;
+            padding: 5px 9px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 8px;
+            color: #cfd6d4;
             font-size: 10px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.1s;
+            transition: all 0.15s;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .code-btn:hover { background: #3a5a7a; color: #fff; }
+        .code-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
         .code-btn.green {
-            background: #2a5a3a;
-            border-color: #4aaa6a;
-            color: #aaf5c8;
+            background: rgba(127,217,154,0.16);
+            border-color: rgba(143,213,162,0.5);
+            color: #cdf0d6;
         }
-        .code-btn.green:hover { background: #3a6a4a; }
+        .code-btn.green:hover { background: rgba(127,217,154,0.26); }
+        .help-btn { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.14); color: #cfd6d4; }
+        .help-btn:hover { background: rgba(255,255,255,0.12); }
 
         #block-count-display {
             margin-left: auto;
-            color: #888;
+            color: #8a9390;
             font-size: 10px;
             white-space: nowrap;
         }
-        #block-count-display span { color: #c8e88a; font-weight: 700; }
+        #block-count-display span { color: #9fe3ae; font-weight: 700; }
 
         /* ─── ROTATE BUTTON ──────────────────────── */
         #rotate-btn {
-            padding: 5px 10px;
-            background: #4a3a6a;
-            border: 1px solid #7a5aaa;
-            border-radius: 4px;
-            color: #d4aaf5;
+            padding: 6px 10px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.16);
+            border-radius: 8px;
+            color: #e6e9e8;
             font-size: 11px;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.1s;
+            transition: all 0.15s;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             min-width: 48px;
             text-align: center;
         }
-        #rotate-btn:hover { background: #5a4a7a; }
-        #rotate-btn:disabled { background: #2a2a2a; border-color: #444; color: #555; cursor: default; }
+        #rotate-btn:hover { background: rgba(255,255,255,0.14); }
+        #rotate-btn:disabled { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); color: #565b5a; cursor: default; }
 
         /* ─── SPRITE GRID (right panel top) ─────── */
         #sprite-panel {
-            padding: 8px;
-            border-bottom: 2px solid #444;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
             flex: 1;
             overflow-y: auto;
         }
-        #sprite-panel::-webkit-scrollbar { width: 4px; }
-        #sprite-panel::-webkit-scrollbar-track { background: #1a1a1a; }
-        #sprite-panel::-webkit-scrollbar-thumb { background: #555; border-radius: 2px; }
+        #sprite-panel::-webkit-scrollbar { width: 5px; }
+        #sprite-panel::-webkit-scrollbar-track { background: transparent; }
+        #sprite-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); border-radius: 3px; }
 
         .sprite-section-label {
-            color: #6a8a4a;
+            color: #8fd5a0;
             font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin: 6px 0 4px;
+            margin: 8px 0 4px;
         }
 
         #sprite-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 3px;
+            gap: 4px;
         }
 
         .sprite-cell {
             aspect-ratio: 1;
-            background: #2a2f2a;
-            border: 2px solid #3a3f3a;
-            border-radius: 3px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 8px;
             cursor: pointer;
             overflow: hidden;
             position: relative;
-            transition: border-color 0.1s;
+            transition: border-color 0.15s, background 0.15s;
         }
-        .sprite-cell:hover { border-color: #8aaa5a; }
+        .sprite-cell:hover { border-color: rgba(159,227,174,0.55); background: rgba(255,255,255,0.08); }
         .sprite-cell.selected {
-            border-color: #9abe5a;
-            box-shadow: 0 0 0 1px #9abe5a, inset 0 0 0 1px rgba(154,190,90,0.2);
+            border-color: #9fe3ae;
+            box-shadow: 0 0 0 1px rgba(159,227,174,0.6), 0 0 12px rgba(159,227,174,0.3), inset 0 0 0 1px rgba(159,227,174,0.2);
         }
         .sprite-cell canvas {
             width: 100%;
@@ -194,11 +202,12 @@
             bottom: calc(100% + 4px);
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.9);
-            color: #ddd;
+            background: rgba(20,22,24,0.95);
+            border: 1px solid rgba(255,255,255,0.14);
+            color: #e2e6e4;
             font-size: 10px;
             padding: 3px 6px;
-            border-radius: 3px;
+            border-radius: 6px;
             white-space: nowrap;
             z-index: 100;
             pointer-events: none;
@@ -207,104 +216,126 @@
 
         /* ─── BOTTOM CODE PANEL ──────────────────── */
         #code-panel {
-            padding: 8px;
-            border-top: 2px solid #444;
-            background: rgba(15,20,15,0.8);
+            padding: 10px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            background: rgba(20,23,25,0.3);
         }
         #code-panel label {
-            color: #6a8a4a;
+            color: #8fd5a0;
             font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
             display: block;
-            margin-bottom: 4px;
+            margin-bottom: 5px;
         }
         #code-textarea {
             width: 100%;
             height: 52px;
-            background: #111;
-            border: 1px solid #444;
-            border-radius: 3px;
-            color: #c8e870;
+            background: rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            color: #cdeed4;
             font-family: monospace;
             font-size: 10px;
-            padding: 4px;
+            padding: 6px;
             resize: none;
             outline: none;
         }
-        #code-textarea:focus { border-color: #6a9a3a; }
+        #code-textarea:focus { border-color: rgba(159,227,174,0.5); }
         .code-action-row {
             display: flex;
-            gap: 4px;
-            margin-top: 4px;
+            gap: 5px;
+            margin-top: 5px;
         }
         .code-action-row button {
             flex: 1;
-            padding: 5px 4px;
-            border-radius: 3px;
+            padding: 6px 4px;
+            border-radius: 8px;
             border: 1px solid;
             font-size: 10px;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.1s;
+            transition: all 0.15s;
             letter-spacing: 0.3px;
         }
-        #copy-btn { background: #1a3a5a; border-color: #3a6a9a; color: #8ac8f5; }
-        #copy-btn:hover { background: #2a4a6a; }
-        #load-btn { background: #1a3a2a; border-color: #3a6a4a; color: #8af5b8; }
-        #load-btn:hover { background: #2a4a3a; }
-        #clear-btn { background: #3a1a1a; border-color: #6a3a3a; color: #f58a8a; }
-        #clear-btn:hover { background: #4a2a2a; }
+        #copy-btn { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.18); color: #d8dedc; }
+        #copy-btn:hover { background: rgba(255,255,255,0.12); }
+        #load-btn { background: rgba(127,217,154,0.14); border-color: rgba(143,213,162,0.45); color: #cdf0d6; }
+        #load-btn:hover { background: rgba(127,217,154,0.24); }
+        #clear-btn { background: rgba(224,110,110,0.14); border-color: rgba(224,130,130,0.4); color: #ffd6d6; }
+        #clear-btn:hover { background: rgba(224,110,110,0.24); }
+        .bp-btn {
+            flex: 1;
+            padding: 6px 4px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.16);
+            background: rgba(255,255,255,0.06);
+            color: #d8dedc;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .bp-btn:hover { background: rgba(255,255,255,0.13); }
 
         /* ─── COORD DISPLAY ──────────────────────── */
         #coord-display {
             position: absolute;
             bottom: 0; left: 0;
-            background: rgba(10,15,10,0.85);
-            color: #5a8a5a;
+            background: rgba(24,27,29,0.65);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255,255,255,0.10);
+            border-right: 1px solid rgba(255,255,255,0.10);
+            color: #9fe3ae;
             font-size: 11px;
             font-family: monospace;
-            padding: 3px 10px;
+            padding: 4px 10px;
             z-index: 20;
-            border-top-right-radius: 4px;
+            border-top-right-radius: 8px;
         }
 
         /* ─── HELP MODAL ─────────────────────────── */
         #help-overlay {
             position: fixed; inset: 0;
-            background: rgba(0,0,0,0.75);
+            background: rgba(10,12,13,0.55);
+            backdrop-filter: blur(4px);
             display: flex; align-items: center; justify-content: center;
             z-index: 100;
         }
         #help-overlay.hidden { display: none; }
         #help-modal {
-            background: #1e261e;
-            border: 2px solid #4a6a3a;
-            border-radius: 8px;
-            padding: 24px;
+            background: linear-gradient(180deg, rgba(52,58,62,0.85), rgba(30,34,37,0.9));
+            backdrop-filter: blur(20px) saturate(150%);
+            -webkit-backdrop-filter: blur(20px) saturate(150%);
+            border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 18px;
+            padding: 26px;
             max-width: 440px;
             width: 90%;
-            color: #ccc;
+            color: #d3d9d7;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
-        #help-modal h2 { color: #9abe5a; font-size: 18px; margin-bottom: 16px; }
-        #help-modal h3 { color: #7a9a5a; font-size: 13px; margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 1px; }
+        #help-modal h2 { color: #a8ecb6; font-size: 18px; margin-bottom: 16px; }
+        #help-modal h3 { color: #8fbf9a; font-size: 13px; margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 1px; }
         #help-modal ul { list-style: none; padding: 0; }
-        #help-modal li { font-size: 12px; padding: 3px 0; border-bottom: 1px solid #2a3a2a; color: #aaa; }
-        #help-modal li strong { color: #c8e88a; }
+        #help-modal li { font-size: 12px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.08); color: #b8bfbc; }
+        #help-modal li strong { color: #d3f5d9; }
         #close-help-btn {
             margin-top: 16px;
-            padding: 8px 20px;
-            background: #4a6a2a;
-            border: 1px solid #7a9a4a;
-            border-radius: 4px;
-            color: #c8e88a;
+            padding: 10px 20px;
+            background: rgba(127,217,154,0.18);
+            border: 1px solid rgba(143,213,162,0.5);
+            border-radius: 10px;
+            color: #d3f5d9;
             cursor: pointer;
             font-size: 13px;
             font-weight: 700;
             width: 100%;
+            transition: all 0.15s;
         }
-        #close-help-btn:hover { background: #5a7a3a; }
+        #close-help-btn:hover { background: rgba(127,217,154,0.3); }
 
         /* ─── COPY TOAST ─────────────────────────── */
         #toast {
@@ -312,13 +343,16 @@
             top: 60px;
             left: 50%;
             transform: translateX(-50%) translateY(-10px);
-            background: rgba(80,140,50,0.95);
-            color: #e8f5c8;
+            background: rgba(40,44,42,0.85);
+            backdrop-filter: blur(14px) saturate(150%);
+            -webkit-backdrop-filter: blur(14px) saturate(150%);
+            color: #d3f5d9;
             font-size: 12px;
             font-weight: 700;
-            padding: 8px 18px;
+            padding: 9px 20px;
             border-radius: 20px;
-            border: 1px solid #9abe5a;
+            border: 1px solid rgba(159,227,174,0.4);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.2s, transform 0.2s;
@@ -335,13 +369,16 @@
             top: 12px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(80,100,50,0.9);
-            color: #e8f5c8;
+            background: rgba(40,44,42,0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: #d3f5d9;
             font-size: 11px;
             font-weight: 700;
-            padding: 5px 14px;
-            border-radius: 12px;
-            border: 1px solid #7a9a4a;
+            padding: 6px 15px;
+            border-radius: 14px;
+            border: 1px solid rgba(159,227,174,0.4);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
             z-index: 20;
             pointer-events: none;
             display: none;
@@ -351,28 +388,32 @@
         /* ─── STORAGE MODAL ──────────────────────── */
         #storage-overlay {
             position: fixed; inset: 0;
-            background: rgba(0,0,0,0.6);
+            background: rgba(10,12,13,0.5);
+            backdrop-filter: blur(4px);
             display: flex; align-items: center; justify-content: center;
             z-index: 150;
         }
         #storage-overlay.hidden { display: none; }
         #storage-modal {
-            background: #1a1f1a;
-            border: 2px solid #4a6a4a;
-            border-radius: 8px;
-            padding: 16px;
+            background: linear-gradient(180deg, rgba(52,58,62,0.85), rgba(30,34,37,0.9));
+            backdrop-filter: blur(20px) saturate(150%);
+            -webkit-backdrop-filter: blur(20px) saturate(150%);
+            border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 18px;
+            padding: 18px;
             width: 220px;
-            color: #ccc;
+            color: #d3d9d7;
             position: relative;
             font-family: 'Segoe UI', Tahoma, sans-serif;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
         #storage-modal h3 {
-            color: #9abe5a;
+            color: #a8ecb6;
             font-size: 13px;
             margin-bottom: 4px;
         }
         #storage-modal .storage-subtitle {
-            color: #555;
+            color: #7d8582;
             font-size: 10px;
             margin-bottom: 12px;
         }
@@ -385,9 +426,9 @@
         .storage-slot {
             width: 80px;
             height: 80px;
-            background: #0d1a0d;
-            border: 2px solid #2a3a2a;
-            border-radius: 6px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -397,9 +438,9 @@
             transition: border-color 0.15s, background 0.15s;
             gap: 4px;
         }
-        .storage-slot:hover { border-color: #7a9a4a; background: #152015; }
-        .storage-slot.empty-slot { border-style: dashed; border-color: #2a3a2a; }
-        .storage-slot.empty-slot:hover { border-color: #5a7a4a; }
+        .storage-slot:hover { border-color: rgba(159,227,174,0.5); background: rgba(159,227,174,0.06); }
+        .storage-slot.empty-slot { border-style: dashed; border-color: rgba(255,255,255,0.10); }
+        .storage-slot.empty-slot:hover { border-color: rgba(255,255,255,0.25); }
         .storage-slot img {
             width: 52px;
             height: 52px;
@@ -409,7 +450,7 @@
         }
         .storage-slot .slot-name {
             font-size: 8px;
-            color: #7a9a5a;
+            color: #a3ceac;
             text-align: center;
             padding: 0 2px;
             line-height: 1.2;
@@ -420,14 +461,15 @@
         }
         .storage-slot .slot-empty-label {
             font-size: 10px;
-            color: #2a4a2a;
+            color: #565d5a;
         }
         .storage-slot .slot-remove {
             display: none;
             position: absolute;
             top: -7px; right: -7px;
             width: 16px; height: 16px;
-            background: #8c3e3e;
+            background: rgba(224,110,110,0.9);
+            border: 1px solid rgba(255,255,255,0.3);
             border-radius: 50%;
             font-size: 10px;
             color: #fff;
@@ -441,107 +483,112 @@
         .storage-slot:hover .slot-remove { display: flex; }
         #storage-close-btn {
             width: 100%;
-            padding: 7px;
-            background: #2a3a2a;
-            border: 1px solid #4a6a4a;
-            border-radius: 4px;
-            color: #9abe5a;
+            padding: 8px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.16);
+            border-radius: 10px;
+            color: #d3d9d7;
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
             font-family: 'Segoe UI', Tahoma, sans-serif;
+            transition: all 0.15s;
         }
-        #storage-close-btn:hover { background: #3a4a3a; }
+        #storage-close-btn:hover { background: rgba(255,255,255,0.14); }
 
         /* ─── ITEM PICKER MODAL ──────────────────── */
         #picker-overlay {
             position: fixed; inset: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(10,12,13,0.5);
+            backdrop-filter: blur(4px);
             display: flex; align-items: center; justify-content: center;
             z-index: 200;
         }
         #picker-overlay.hidden { display: none; }
         #picker-modal {
-            background: #141a14;
-            border: 2px solid #4a6a4a;
-            border-radius: 8px;
-            padding: 14px;
+            background: linear-gradient(180deg, rgba(52,58,62,0.85), rgba(30,34,37,0.9));
+            backdrop-filter: blur(20px) saturate(150%);
+            -webkit-backdrop-filter: blur(20px) saturate(150%);
+            border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 18px;
+            padding: 16px;
             width: 400px;
             max-height: 75vh;
             display: flex;
             flex-direction: column;
             font-family: 'Segoe UI', Tahoma, sans-serif;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
         #picker-modal h4 {
-            color: #9abe5a;
+            color: #a8ecb6;
             font-size: 12px;
             margin-bottom: 8px;
         }
         #picker-cats {
             display: flex;
             flex-wrap: wrap;
-            gap: 3px;
+            gap: 4px;
             margin-bottom: 8px;
         }
         .picker-cat-btn {
-            padding: 3px 8px;
-            background: #1a2a1a;
-            border: 1px solid #2a3a2a;
-            border-radius: 10px;
-            color: #6a8a4a;
+            padding: 4px 9px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            color: #9aa5a2;
             font-size: 10px;
             font-weight: 600;
             cursor: pointer;
             font-family: 'Segoe UI', Tahoma, sans-serif;
-            transition: all 0.1s;
+            transition: all 0.15s;
             white-space: nowrap;
         }
-        .picker-cat-btn:hover { border-color: #6a9a4a; color: #9abe5a; }
+        .picker-cat-btn:hover { border-color: rgba(159,227,174,0.5); color: #d3f5d9; }
         .picker-cat-btn.active {
-            background: #2a4a1a;
-            border-color: #9abe5a;
-            color: #c8e88a;
+            background: rgba(127,217,154,0.18);
+            border-color: rgba(143,213,162,0.55);
+            color: #d3f5d9;
         }
         #picker-search {
             width: 100%;
-            background: #0d140d;
-            border: 1px solid #3a5a3a;
-            border-radius: 4px;
-            color: #c8e88a;
+            background: rgba(0,0,0,0.22);
+            border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 8px;
+            color: #d3f5d9;
             font-size: 11px;
-            padding: 5px 8px;
+            padding: 6px 9px;
             margin-bottom: 8px;
             outline: none;
             font-family: monospace;
             box-sizing: border-box;
         }
-        #picker-search:focus { border-color: #7a9a4a; }
+        #picker-search:focus { border-color: rgba(159,227,174,0.5); }
         #picker-grid {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
-            gap: 4px;
+            gap: 5px;
             overflow-y: auto;
             flex: 1;
         }
-        #picker-grid::-webkit-scrollbar { width: 4px; }
-        #picker-grid::-webkit-scrollbar-track { background: #0d140d; }
-        #picker-grid::-webkit-scrollbar-thumb { background: #4a6a4a; border-radius: 2px; }
+        #picker-grid::-webkit-scrollbar { width: 5px; }
+        #picker-grid::-webkit-scrollbar-track { background: transparent; }
+        #picker-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); border-radius: 3px; }
         .picker-item {
             aspect-ratio: 1;
-            background: #1a2a1a;
-            border: 2px solid #2a3a2a;
-            border-radius: 4px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             position: relative;
-            transition: border-color 0.1s, background 0.1s;
+            transition: border-color 0.15s, background 0.15s;
             padding: 2px;
             gap: 2px;
         }
-        .picker-item:hover { border-color: #9abe5a; background: #1e2e1e; }
+        .picker-item:hover { border-color: rgba(159,227,174,0.5); background: rgba(159,227,174,0.08); }
         .picker-item img {
             width: 80%;
             height: 80%;
@@ -551,7 +598,7 @@
         }
         .picker-item .picker-name {
             font-size: 7px;
-            color: #7a9a5a;
+            color: #9aa5a2;
             text-align: center;
             line-height: 1.1;
             max-width: 100%;
@@ -563,78 +610,84 @@
         #picker-cancel-btn {
             margin-top: 8px;
             width: 100%;
-            padding: 6px;
-            background: #2a1a1a;
-            border: 1px solid #6a3a3a;
-            border-radius: 4px;
-            color: #f58a8a;
+            padding: 7px;
+            background: rgba(224,110,110,0.14);
+            border: 1px solid rgba(224,130,130,0.4);
+            border-radius: 10px;
+            color: #ffd6d6;
             font-size: 11px;
             font-weight: 700;
             cursor: pointer;
             font-family: 'Segoe UI', Tahoma, sans-serif;
+            transition: all 0.15s;
         }
-        #picker-cancel-btn:hover { background: #3a2a2a; }
+        #picker-cancel-btn:hover { background: rgba(224,110,110,0.24); }
 
         /* ─── HOUSES MODAL ────────────────────────── */
         #houses-overlay {
             position: fixed; inset: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(10,12,13,0.5);
+            backdrop-filter: blur(4px);
             display: flex; align-items: center; justify-content: center;
             z-index: 200;
         }
         #houses-overlay.hidden { display: none; }
         #houses-modal {
-            background: #141a14;
-            border: 2px solid #4a6a4a;
-            border-radius: 8px;
-            padding: 14px;
+            background: linear-gradient(180deg, rgba(52,58,62,0.85), rgba(30,34,37,0.9));
+            backdrop-filter: blur(20px) saturate(150%);
+            -webkit-backdrop-filter: blur(20px) saturate(150%);
+            border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 18px;
+            padding: 16px;
             width: 260px;
             max-height: 75vh;
             display: flex;
             flex-direction: column;
             font-family: 'Segoe UI', Tahoma, sans-serif;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
-        #houses-modal h4 { color: #9abe5a; font-size: 12px; margin-bottom: 8px; }
+        #houses-modal h4 { color: #a8ecb6; font-size: 12px; margin-bottom: 8px; }
         #houses-list {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 6px;
             overflow-y: auto;
             flex: 1;
         }
-        #houses-list::-webkit-scrollbar { width: 4px; }
-        #houses-list::-webkit-scrollbar-track { background: #0d140d; }
-        #houses-list::-webkit-scrollbar-thumb { background: #4a6a4a; border-radius: 2px; }
+        #houses-list::-webkit-scrollbar { width: 5px; }
+        #houses-list::-webkit-scrollbar-track { background: transparent; }
+        #houses-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); border-radius: 3px; }
         .house-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: #1a2a1a;
-            border: 2px solid #2a3a2a;
-            border-radius: 4px;
-            padding: 8px 10px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 10px;
+            padding: 9px 11px;
             cursor: pointer;
-            transition: border-color 0.1s, background 0.1s;
-            color: #cde8b0;
+            transition: border-color 0.15s, background 0.15s;
+            color: #dbe2df;
             font-size: 12px;
             font-weight: 600;
         }
-        .house-item:hover { border-color: #9abe5a; background: #1e2e1e; color: #fff; }
-        .house-item .house-count { color: #6a8a4a; font-size: 10px; font-weight: 600; }
+        .house-item:hover { border-color: rgba(159,227,174,0.55); background: rgba(159,227,174,0.10); color: #fff; }
+        .house-item .house-count { color: #8fbf9a; font-size: 10px; font-weight: 600; }
         #houses-cancel-btn {
             margin-top: 8px;
             width: 100%;
-            padding: 6px;
-            background: #2a1a1a;
-            border: 1px solid #6a3a3a;
-            border-radius: 4px;
-            color: #f58a8a;
+            padding: 7px;
+            background: rgba(224,110,110,0.14);
+            border: 1px solid rgba(224,130,130,0.4);
+            border-radius: 10px;
+            color: #ffd6d6;
             font-size: 11px;
             font-weight: 700;
             cursor: pointer;
             font-family: 'Segoe UI', Tahoma, sans-serif;
+            transition: all 0.15s;
         }
-        #houses-cancel-btn:hover { background: #3a2a2a; }
+        #houses-cancel-btn:hover { background: rgba(224,110,110,0.24); }
     </style>
 </head>
 <body>
@@ -660,10 +713,10 @@
                 <button class="mode-btn" id="mode-btn-clone" onclick="setMode('clone')">📋 Clone</button>
                 <button class="mode-btn" id="mode-btn-delete" onclick="setMode('delete')">🗑 Delete</button>
             </div>
-            <button class="mode-btn" id="mode-btn-houses" onclick="openHousesMenu()" style="width:100%;margin-bottom:6px;background:#2a4a3a;border-color:#4a9a6a;color:#aaf5c8;">🏠 Houses</button>
+            <button class="mode-btn houses-btn" id="mode-btn-houses" onclick="openHousesMenu()">🏠 Houses</button>
             <div id="mode-bar-bottom">
                 <button id="rotate-btn" onclick="toggleRotation()" title="Rotate (R)">0°</button>
-                <button class="code-btn" style="background:#3a2a1a;border-color:#8a6a3a;color:#f5d8aa;" onclick="showHelp()">? Help</button>
+                <button class="code-btn help-btn" onclick="showHelp()">? Help</button>
                 <div id="block-count-display">Blocks: <span id="block-count">0</span></div>
             </div>
         </div>
@@ -680,8 +733,8 @@
                 <button id="clear-btn" onclick="clearAll()">Clear</button>
             </div>
             <div class="code-action-row" style="margin-top:4px;">
-                <button onclick="exportBlueprint()" style="flex:1;padding:5px 4px;border-radius:3px;border:1px solid #7a5aaa;background:#2a1a4a;color:#d4aaf5;font-size:10px;font-weight:700;cursor:pointer;">💾 Save Blueprint</button>
-                <button onclick="document.getElementById('blueprint-file').click()" style="flex:1;padding:5px 4px;border-radius:3px;border:1px solid #5aaa7a;background:#1a4a2a;color:#aaf5d4;font-size:10px;font-weight:700;cursor:pointer;">📂 Load Blueprint</button>
+                <button class="bp-btn bp-save" onclick="exportBlueprint()">💾 Save Blueprint</button>
+                <button class="bp-btn bp-load" onclick="document.getElementById('blueprint-file').click()">📂 Load Blueprint</button>
             </div>
             <input type="file" id="blueprint-file" accept=".json" style="display:none" onchange="importBlueprint(event)">
         </div>
